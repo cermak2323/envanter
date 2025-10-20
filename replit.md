@@ -1,17 +1,31 @@
-# Envanter Sayım Sistemi
+# Cermak Envanter Sistemi
 
 ## Proje Açıklaması
-Python Flask ile geliştirilmiş QR kod tabanlı envanter sayım sistemi. Excel dosyalarından parça bilgilerini yükleyerek benzersiz QR kodları oluşturur, çoklu kullanıcılarla eş zamanlı sayım yapılmasını sağlar ve detaylı Excel raporları üretir.
+Python Flask ile geliştirilmiş güvenli, kullanıcı yönetimli QR kod tabanlı envanter sayım sistemi. Excel dosyalarından parça bilgilerini yükleyerek benzersiz QR kodları oluşturur, çoklu kullanıcılarla eş zamanlı sayım yapılmasını sağlar ve detaylı Excel raporları üretir. Kırmızı-beyaz tema ve Cermak branding'i ile özelleştirilmiştir.
 
 ## Ana Özellikler
-1. **QR Kod Oluşturma**: Excel dosyasından (part_code, part_name, quantity) parça bilgilerini yükleyerek her parça birimi için benzersiz QR kod oluşturur
-2. **QR Kod Yönetimi**: Oluşturulan QR kodları ekranda görüntülenir ve ZIP dosyası olarak toplu indirilebilir
-3. **Sayım Başlatma**: Envanter Excel dosyası (part_code, quantity) yüklenerek sayım oturumu başlatılır
-4. **Çoklu Kullanıcı Desteği**: WebSocket (SocketIO) kullanarak birden fazla kullanıcı aynı anda QR kod okutabilir
-5. **QR Okutma**: Mobil uyumlu kamera entegrasyonu ile QR kodlar okunur ve işaretlenir
-6. **Tek Kullanımlık QR**: Her QR kod sadece bir kez kullanılabilir
-7. **Sistem Kilitleme**: Aktif sayım sırasında sadece QR okutma yapılabilir
-8. **Excel Rapor**: Sayım bittiğinde parça kodu, adı, sayım adeti, envanter adeti ve fark içeren rapor oluşturulur
+
+### Kullanıcı Yönetimi
+1. **Login Sistemi**: Güvenli session tabanlı kimlik doğrulama
+2. **Kullanıcı Rolleri**: Admin ve kullanıcı rolleri
+3. **Admin Paneli**: Kullanıcı ekleme, silme ve yönetim
+4. **Varsayılan Admin**: Kullanıcı adı: `admin`, Şifre: `admin123`
+
+### QR Kod Yönetimi
+5. **QR Kod Oluşturma**: Excel dosyasından (part_code, part_name, quantity) parça bilgilerini yükleyerek her parça birimi için benzersiz QR kod oluşturur
+6. **Arama Özelliği**: Parça kodu veya adı ile QR kodları filtreleme
+7. **Modal Görüntüleme**: QR kodlara tıklayınca büyük ekranda görüntüleme
+8. **Tekli İndirme**: Her QR kodu ayrı ayrı indirme ve işaretleme
+9. **Toplu İndirme**: Tüm QR kodları ZIP dosyası olarak indirme
+10. **İndirme Takibi**: İndirilen QR kodlar otomatik işaretlenir
+
+### Sayım Özellikleri
+11. **Sayım Başlatma**: Envanter Excel dosyası (part_code, quantity) yüklenerek sayım oturumu başlatılır
+12. **Çoklu Kullanıcı**: WebSocket ile birden fazla kullanıcı aynı anda QR okutabilir
+13. **Mobil QR Okutma**: Mobil uyumlu kamera entegrasyonu
+14. **Tek Kullanımlık QR**: Her QR kod sadece bir kez kullanılabilir
+15. **Sistem Kilitleme**: Aktif sayım sırasında sadece QR okutma yapılabilir
+16. **Excel Rapor**: Detaylı sayım raporu (Parça Kodu, Adı, Envanter, Sayım, Fark)
 
 ## Teknoloji Stack
 - **Backend**: Python 3.11, Flask, Flask-SocketIO
@@ -34,8 +48,9 @@ Python Flask ile geliştirilmiş QR kod tabanlı envanter sayım sistemi. Excel 
 ```
 
 ## Veritabanı Şeması
+- **users**: Kullanıcı bilgileri (username, password hash, full_name, role)
 - **parts**: Yüklenen parça bilgileri
-- **qr_codes**: Oluşturulan QR kodlar ve kullanım durumları
+- **qr_codes**: Oluşturulan QR kodlar, kullanım ve indirme durumları
 - **count_sessions**: Sayım oturumları
 - **inventory_data**: Sayım için beklenen envanter verileri
 - **scanned_qr**: Okutulan QR kodların kaydı
@@ -52,11 +67,18 @@ Python Flask ile geliştirilmiş QR kod tabanlı envanter sayım sistemi. Excel 
 9. Excel raporu otomatik indirilir
 
 ## Son Değişiklikler
-- 2025-10-20: İlk versiyon oluşturuldu
-- Flask backend ve SQLite veritabanı kuruldu
-- WebSocket desteği eklendi
-- Mobil uyumlu QR okuma arayüzü geliştirildi
-- Excel yükleme ve rapor çıktı sistemi oluşturuldu
+- 2025-10-20: 
+  - İlk versiyon oluşturuldu
+  - Flask backend ve SQLite veritabanı kuruldu
+  - WebSocket desteği eklendi
+  - Mobil uyumlu QR okuma arayüzü geliştirildi
+  - Excel yükleme ve rapor çıktı sistemi oluşturuldu
+  - Kullanıcı yönetimi ve authentication sistemi eklendi
+  - Cermak branding ve kırmızı-beyaz tema uygulandı
+  - QR kod arama, modal görüntüleme ve indirme özellikleri eklendi
+  - Admin paneli eklendi
+  - Tüm endpoint'ler güvenlik için korundu
+  - Path traversal güvenlik açığı kapatıldı
 
 ## Çalıştırma
 ```bash

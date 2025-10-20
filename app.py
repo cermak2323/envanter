@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file, session
 from flask_socketio import SocketIO, emit
+from werkzeug.utils import secure_filename
 import sqlite3
 import pandas as pd
 import qrcode
@@ -9,6 +10,7 @@ import os
 import uuid
 from datetime import datetime
 import zipfile
+import re
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
@@ -16,6 +18,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 DATABASE = 'inventory.db'
+REPORTS_DIR = 'reports'
+
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -89,6 +94,15 @@ def index():
 
 @app.route('/upload_parts', methods=['POST'])
 def upload_parts():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) as count FROM count_sessions WHERE status = "active"')
+    active_session = cursor.fetchone()
+    conn.close()
+    
+    if active_session[0] > 0:
+        return jsonify({'error': 'Aktif bir sayım oturumu var. Önce sayımı bitirin.'}), 400
+    
     if 'file' not in request.files:
         return jsonify({'error': 'Dosya bulunamadı'}), 400
     
@@ -96,7 +110,7 @@ def upload_parts():
     if file.filename == '':
         return jsonify({'error': 'Dosya seçilmedi'}), 400
     
-    if not file.filename.endswith(('.xlsx', '.xls')):
+    if not (file.filename and file.filename.endswith(('.xlsx', '.xls'))):
         return jsonify({'error': 'Sadece Excel dosyaları yüklenebilir'}), 400
     
     try:
@@ -364,8 +378,9 @@ def finish_count():
     output.seek(0)
     
     report_filename = f'sayim_raporu_{session_id[:8]}.xlsx'
+    report_path = os.path.join(REPORTS_DIR, report_filename)
     
-    with open(report_filename, 'wb') as f:
+    with open(report_path, 'wb') as f:
         f.write(output.getvalue())
     
     conn.commit()
@@ -381,10 +396,22 @@ def finish_count():
 
 @app.route('/download_report/<filename>')
 def download_report(filename):
-    if os.path.exists(filename):
-        return send_file(filename, as_attachment=True)
-    else:
+    if not re.match(r'^sayim_raporu_[a-f0-9]{8}\.xlsx$', filename):
+        return jsonify({'error': 'Geçersiz dosya adı'}), 400
+    
+    safe_filename = secure_filename(filename)
+    report_path = os.path.join(REPORTS_DIR, safe_filename)
+    
+    if not os.path.exists(report_path):
         return jsonify({'error': 'Rapor dosyası bulunamadı'}), 404
+    
+    real_path = os.path.realpath(report_path)
+    reports_real_path = os.path.realpath(REPORTS_DIR)
+    
+    if not real_path.startswith(reports_real_path):
+        return jsonify({'error': 'Geçersiz dosya yolu'}), 403
+    
+    return send_file(report_path, as_attachment=True)
 
 if __name__ == '__main__':
     init_db()

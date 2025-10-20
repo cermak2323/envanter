@@ -33,6 +33,7 @@ env/
 *.sqlite3
 
 # Reports
+reports/
 sayim_raporu_*.xlsx
 
 # IDE

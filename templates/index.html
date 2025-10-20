@@ -3,34 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Envanter Sayım Sistemi</title>
+    <title>Cermak Envanter Sistemi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        :root {
+            --cermak-red: #dc3545;
+            --cermak-red-dark: #c82333;
+            --cermak-red-darker: #bd2130;
+        }
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             min-height: 100vh;
             padding: 20px;
         }
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
+            box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
         .main-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         .card {
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+            border: none;
         }
         .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
             color: white;
             border-radius: 15px 15px 0 0 !important;
             padding: 15px 20px;
+            font-weight: 600;
         }
-        .btn-custom {
-            border-radius: 25px;
+        .btn-cermak {
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
             padding: 10px 25px;
             font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-cermak:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220,53,69,0.3);
+            color: white;
+        }
+        .search-box {
+            border-radius: 25px;
+            border: 2px solid var(--cermak-red);
+            padding: 10px 20px;
+        }
+        .search-box:focus {
+            box-shadow: 0 0 0 0.2rem rgba(220,53,69,0.25);
+            border-color: var(--cermak-red);
         }
         .qr-grid {
             display: grid;
@@ -40,10 +75,17 @@
         }
         .qr-item {
             border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 10px;
+            border-radius: 15px;
+            padding: 15px;
             text-align: center;
             background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .qr-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: var(--cermak-red);
         }
         .qr-item img {
             width: 150px;
@@ -51,11 +93,23 @@
         }
         .qr-item.used {
             opacity: 0.5;
-            border-color: #dc3545;
+            border-color: #6c757d;
+        }
+        .qr-item.downloaded {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .badge-downloaded {
+            background: #28a745;
+        }
+        .badge-used {
+            background: #6c757d;
         }
         #reader {
             max-width: 500px;
             margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
         }
         .scan-message {
             font-size: 1.2rem;
@@ -74,42 +128,43 @@
             color: #721c24;
             border: 2px solid #f5c6cb;
         }
-        .disabled-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 9999;
-            display: none;
-            justify-content: center;
-            align-items: center;
-        }
-        .disabled-message {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
+        .modal-qr {
             text-align: center;
-            max-width: 500px;
+        }
+        .modal-qr img {
+            max-width: 400px;
+            width: 100%;
+        }
+        .user-badge {
+            background: white;
+            color: var(--cermak-red);
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <h1 class="text-center text-white mb-4">
-            <i class="bi bi-qr-code-scan"></i> Envanter Sayım Sistemi
-        </h1>
-
-        <div id="disabledOverlay" class="disabled-overlay">
-            <div class="disabled-message">
-                <i class="bi bi-lock-fill" style="font-size: 4rem; color: #dc3545;"></i>
-                <h2 class="mt-3">Sayım Devam Ediyor</h2>
-                <p class="text-muted">Sistem kilitli. Sadece QR kod okutma aktif.</p>
-                <button class="btn btn-primary btn-custom" onclick="location.reload()">Yenile</button>
+    <nav class="navbar navbar-dark navbar-custom">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-qr-code-scan"></i> Cermak Envanter Sistemi
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="user-badge me-3">
+                    <i class="bi bi-person-circle"></i> <span id="userName"></span>
+                </span>
+                <button class="btn btn-light" onclick="showAdminPanel()" id="adminBtn" style="display: none; margin-right: 10px;">
+                    <i class="bi bi-gear"></i> Yönetim
+                </button>
+                <button class="btn btn-light" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> Çıkış
+                </button>
             </div>
         </div>
+    </nav>
 
+    <div class="main-container">
         <div class="card" id="uploadSection">
             <div class="card-header">
                 <h5 class="mb-0"><i class="bi bi-file-earmark-excel"></i> 1. QR Kod Oluşturma</h5>
@@ -117,7 +172,7 @@
             <div class="card-body">
                 <p>Excel dosyanızı yükleyin (sütunlar: <strong>part_code</strong>, <strong>part_name</strong>, <strong>quantity</strong>)</p>
                 <input type="file" class="form-control mb-3" id="partsFile" accept=".xlsx,.xls">
-                <button class="btn btn-primary btn-custom" onclick="uploadParts()">
+                <button class="btn btn-cermak" onclick="uploadParts()">
                     <i class="bi bi-upload"></i> Excel Yükle ve QR Oluştur
                 </button>
             </div>
@@ -128,9 +183,16 @@
                 <h5 class="mb-0"><i class="bi bi-qr-code"></i> Oluşturulan QR Kodlar</h5>
             </div>
             <div class="card-body">
-                <button class="btn btn-success btn-custom mb-3" onclick="downloadAllQR()">
-                    <i class="bi bi-download"></i> Tüm QR Kodları İndir (ZIP)
-                </button>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control search-box" id="searchBox" placeholder="Parça kodu veya adı ile ara...">
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-success" onclick="downloadAllQR()">
+                            <i class="bi bi-download"></i> Tüm QR Kodları İndir (ZIP)
+                        </button>
+                    </div>
+                </div>
                 <div id="qrGrid" class="qr-grid"></div>
             </div>
         </div>
@@ -142,7 +204,7 @@
             <div class="card-body">
                 <p>Envanter Excel dosyanızı yükleyin (sütunlar: <strong>part_code</strong>, <strong>quantity</strong>)</p>
                 <input type="file" class="form-control mb-3" id="inventoryFile" accept=".xlsx,.xls">
-                <button class="btn btn-warning btn-custom" onclick="startCount()">
+                <button class="btn btn-warning" onclick="startCount()">
                     <i class="bi bi-play-fill"></i> Sayımı Başlat
                 </button>
             </div>
@@ -156,9 +218,75 @@
                 <div id="scanMessages"></div>
                 <div id="reader"></div>
                 <div class="text-center mt-3">
-                    <button class="btn btn-danger btn-custom" onclick="finishCount()">
+                    <button class="btn btn-danger btn-cermak" onclick="finishCount()">
                         <i class="bi bi-stop-circle"></i> Sayımı Bitir ve Rapor Al
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="qrModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%); color: white;">
+                    <h5 class="modal-title"><i class="bi bi-qr-code"></i> QR Kod Detayı</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body modal-qr">
+                    <div id="modalQRContent"></div>
+                    <button class="btn btn-cermak mt-3" id="downloadQRBtn">
+                        <i class="bi bi-download"></i> QR Kodu İndir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="adminModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%); color: white;">
+                    <h5 class="modal-title"><i class="bi bi-gear"></i> Kullanıcı Yönetimi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-cermak mb-3" onclick="showAddUserForm()">
+                        <i class="bi bi-plus-circle"></i> Yeni Kullanıcı Ekle
+                    </button>
+                    
+                    <div id="addUserForm" style="display: none;" class="card p-3 mb-3">
+                        <h6>Yeni Kullanıcı</h6>
+                        <div class="mb-2">
+                            <input type="text" class="form-control" id="newUsername" placeholder="Kullanıcı Adı">
+                        </div>
+                        <div class="mb-2">
+                            <input type="password" class="form-control" id="newPassword" placeholder="Şifre">
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" class="form-control" id="newFullName" placeholder="Ad Soyad">
+                        </div>
+                        <div class="mb-2">
+                            <select class="form-control" id="newRole">
+                                <option value="user">Kullanıcı</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success" onclick="createUser()">Kaydet</button>
+                        <button class="btn btn-secondary" onclick="hideAddUserForm()">İptal</button>
+                    </div>
+                    
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>Ad Soyad</th>
+                                <th>Rol</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -170,6 +298,25 @@
     <script>
         const socket = io();
         let html5QrCode = null;
+        let currentUserRole = '';
+        let qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
+        let adminModal = new bootstrap.Modal(document.getElementById('adminModal'));
+
+        async function checkAuth() {
+            const response = await fetch('/check_auth');
+            const data = await response.json();
+            if (data.authenticated) {
+                document.getElementById('userName').textContent = data.full_name;
+                currentUserRole = data.role;
+                if (data.role === 'admin') {
+                    document.getElementById('adminBtn').style.display = 'inline-block';
+                }
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        checkAuth();
 
         socket.on('connect', function() {
             console.log('WebSocket bağlandı');
@@ -205,10 +352,7 @@
                         document.getElementById('qrSection').style.display = 'none';
                         document.getElementById('countStartSection').style.display = 'none';
                         document.getElementById('scanSection').style.display = 'block';
-                        document.getElementById('disabledOverlay').style.display = 'none';
                         initQRScanner();
-                    } else {
-                        document.getElementById('disabledOverlay').style.display = 'none';
                     }
                 });
         }
@@ -244,26 +388,69 @@
             });
         }
 
-        function loadQRCodes() {
-            fetch('/get_qr_codes')
+        let searchTimeout;
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadQRCodes(e.target.value);
+            }, 300);
+        });
+
+        function loadQRCodes(search = '') {
+            const url = search ? `/get_qr_codes?search=${encodeURIComponent(search)}` : '/get_qr_codes';
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     const qrGrid = document.getElementById('qrGrid');
                     qrGrid.innerHTML = '';
                     
+                    if (data.length === 0) {
+                        qrGrid.innerHTML = '<p class="text-center text-muted">QR kod bulunamadı</p>';
+                        return;
+                    }
+                    
                     data.forEach(qr => {
                         const qrDiv = document.createElement('div');
-                        qrDiv.className = 'qr-item' + (qr.is_used ? ' used' : '');
+                        let className = 'qr-item';
+                        if (qr.is_used) className += ' used';
+                        else if (qr.is_downloaded) className += ' downloaded';
+                        
+                        qrDiv.className = className;
+                        qrDiv.onclick = () => showQRModal(qr);
                         qrDiv.innerHTML = `
                             <img src="/generate_qr_image/${qr.qr_id}" alt="${qr.qr_id}">
-                            <div><strong>${qr.part_name}</strong></div>
+                            <div class="mt-2"><strong>${qr.part_name}</strong></div>
                             <div class="text-muted">${qr.part_code}</div>
                             <div class="text-muted small">${qr.qr_id}</div>
-                            ${qr.is_used ? '<div class="text-danger">Kullanıldı</div>' : ''}
+                            ${qr.is_downloaded ? '<span class="badge badge-downloaded">İndirildi</span>' : ''}
+                            ${qr.is_used ? '<span class="badge badge-used">Kullanıldı</span>' : ''}
                         `;
                         qrGrid.appendChild(qrDiv);
                     });
                 });
+        }
+
+        function showQRModal(qr) {
+            const content = document.getElementById('modalQRContent');
+            content.innerHTML = `
+                <img src="/generate_qr_image/${qr.qr_id}" alt="${qr.qr_id}">
+                <h4 class="mt-3">${qr.part_name}</h4>
+                <p class="text-muted">Parça Kodu: ${qr.part_code}</p>
+                <p class="text-muted">QR ID: ${qr.qr_id}</p>
+                ${qr.is_downloaded ? '<span class="badge badge-downloaded">İndirildi</span>' : ''}
+                ${qr.is_used ? '<span class="badge badge-used">Kullanıldı</span>' : ''}
+            `;
+            
+            document.getElementById('downloadQRBtn').onclick = () => downloadSingleQR(qr.qr_id);
+            qrModal.show();
+        }
+
+        function downloadSingleQR(qrId) {
+            window.location.href = '/download_single_qr/' + qrId;
+            setTimeout(() => {
+                qrModal.hide();
+                loadQRCodes(document.getElementById('searchBox').value);
+            }, 500);
         }
 
         function downloadAllQR() {
@@ -367,6 +554,95 @@
             .catch(error => {
                 alert('Hata: ' + error);
             });
+        }
+
+        async function logout() {
+            await fetch('/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        function showAdminPanel() {
+            loadUsers();
+            adminModal.show();
+        }
+
+        function loadUsers() {
+            fetch('/admin/users')
+                .then(response => response.json())
+                .then(users => {
+                    const tbody = document.getElementById('usersTable');
+                    tbody.innerHTML = '';
+                    users.forEach(user => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${user.username}</td>
+                            <td>${user.full_name}</td>
+                            <td>${user.role === 'admin' ? 'Admin' : 'Kullanıcı'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
+                                    <i class="bi bi-trash"></i> Sil
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
+        function showAddUserForm() {
+            document.getElementById('addUserForm').style.display = 'block';
+        }
+
+        function hideAddUserForm() {
+            document.getElementById('addUserForm').style.display = 'none';
+        }
+
+        async function createUser() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const fullName = document.getElementById('newFullName').value;
+            const role = document.getElementById('newRole').value;
+
+            if (!username || !password || !fullName) {
+                alert('Tüm alanları doldurun');
+                return;
+            }
+
+            const response = await fetch('/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, full_name: fullName, role })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert(data.message);
+                hideAddUserForm();
+                loadUsers();
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('newFullName').value = '';
+            } else {
+                alert(data.error);
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
+                return;
+            }
+
+            const response = await fetch(`/admin/users/${userId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert(data.message);
+                loadUsers();
+            } else {
+                alert(data.error);
+            }
         }
     </script>
 </body>

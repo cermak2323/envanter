@@ -48,8 +48,10 @@ def init_db():
             part_code TEXT NOT NULL,
             part_name TEXT NOT NULL,
             is_used INTEGER DEFAULT 0,
+            is_downloaded INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            used_at TIMESTAMP
+            used_at TIMESTAMP,
+            downloaded_at TIMESTAMP
         )
     ''')
     
@@ -85,12 +87,101 @@ def init_db():
         )
     ''')
     
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            role TEXT DEFAULT 'user',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('SELECT COUNT(*) FROM users')
+    if cursor.fetchone()[0] == 0:
+        import hashlib
+        admin_password = hashlib.sha256('admin123'.encode()).hexdigest()
+        cursor.execute('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
+                     ('admin', admin_password, 'Administrator', 'admin'))
+    
     conn.commit()
     conn.close()
 
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Giriş yapmanız gerekiyor'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Giriş yapmanız gerekiyor'}), 401
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT role FROM users WHERE id = ?', (session['user_id'],))
+        user = cursor.fetchone()
+        conn.close()
+        if not user or user[0] != 'admin':
+            return jsonify({'error': 'Bu işlem için yetkiniz yok'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/')
 def index():
+    if 'user_id' not in session:
+        return render_template('login.html')
     return render_template('index.html')
+
+@app.route('/login', methods=['POST'])
+def login():
+    import hashlib
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'error': 'Kullanıcı adı ve şifre gerekli'}), 400
+    
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username, full_name, role FROM users WHERE username = ? AND password = ?',
+                 (username, password_hash))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if user:
+        session['user_id'] = user[0]
+        session['username'] = user[1]
+        session['full_name'] = user[2]
+        session['role'] = user[3]
+        return jsonify({'success': True, 'role': user[3]})
+    else:
+        return jsonify({'error': 'Kullanıcı adı veya şifre hatalı'}), 401
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'success': True})
+
+@app.route('/check_auth')
+def check_auth():
+    if 'user_id' in session:
+        return jsonify({
+            'authenticated': True,
+            'username': session.get('username'),
+            'full_name': session.get('full_name'),
+            'role': session.get('role')
+        })
+    return jsonify({'authenticated': False})
 
 @app.route('/upload_parts', methods=['POST'])
 def upload_parts():
@@ -159,16 +250,28 @@ def upload_parts():
         return jsonify({'error': f'Hata: {str(e)}'}), 500
 
 @app.route('/get_qr_codes')
+@login_required
 def get_qr_codes():
+    search = request.args.get('search', '')
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes ORDER BY part_code, qr_id')
+    
+    if search:
+        cursor.execute('''SELECT qr_id, part_code, part_name, is_used, is_downloaded 
+                         FROM qr_codes 
+                         WHERE part_code LIKE ? OR part_name LIKE ?
+                         ORDER BY part_code, qr_id''', 
+                     (f'%{search}%', f'%{search}%'))
+    else:
+        cursor.execute('SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes ORDER BY part_code, qr_id LIMIT 100')
+    
     qr_codes = [dict(row) for row in cursor.fetchall()]
     conn.close()
     
     return jsonify(qr_codes)
 
 @app.route('/generate_qr_image/<qr_id>')
+@login_required
 def generate_qr_image(qr_id):
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(qr_id)
@@ -181,7 +284,86 @@ def generate_qr_image(qr_id):
     
     return send_file(buf, mimetype='image/png')
 
+@app.route('/download_single_qr/<qr_id>')
+@login_required
+def download_single_qr(qr_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT part_code FROM qr_codes WHERE qr_id = ?', (qr_id,))
+    result = cursor.fetchone()
+    
+    if not result:
+        conn.close()
+        return jsonify({'error': 'QR kod bulunamadı'}), 404
+    
+    cursor.execute('UPDATE qr_codes SET is_downloaded = 1, downloaded_at = ? WHERE qr_id = ?',
+                 (datetime.now(), qr_id))
+    conn.commit()
+    conn.close()
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(qr_id)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    
+    return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
+
+@app.route('/admin/users')
+@admin_required
+def get_users():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at DESC')
+    users = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(users)
+
+@app.route('/admin/users', methods=['POST'])
+@admin_required
+def create_user():
+    import hashlib
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    full_name = data.get('full_name')
+    role = data.get('role', 'user')
+    
+    if not username or not password or not full_name:
+        return jsonify({'error': 'Tüm alanlar gerekli'}), 400
+    
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
+                     (username, password_hash, full_name, role))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Kullanıcı oluşturuldu'})
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Bu kullanıcı adı zaten kullanılıyor'}), 400
+
+@app.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    if session.get('user_id') == user_id:
+        return jsonify({'error': 'Kendi hesabınızı silemezsiniz'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Kullanıcı silindi'})
+
 @app.route('/download_all_qr')
+@login_required
 def download_all_qr():
     conn = get_db()
     cursor = conn.cursor()
@@ -253,7 +435,7 @@ def start_count():
         
         session['current_session'] = session_id
         
-        socketio.emit('count_started', {'session_id': session_id}, broadcast=True)
+        socketio.emit('count_started', {'session_id': session_id})
         
         return jsonify({
             'success': True,
@@ -386,7 +568,7 @@ def finish_count():
     conn.commit()
     conn.close()
     
-    socketio.emit('count_finished', {'session_id': session_id}, broadcast=True)
+    socketio.emit('count_finished', {'session_id': session_id})
     
     return jsonify({
         'success': True,

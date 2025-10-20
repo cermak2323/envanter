@@ -184,6 +184,7 @@ def check_auth():
     return jsonify({'authenticated': False})
 
 @app.route('/upload_parts', methods=['POST'])
+@login_required
 def upload_parts():
     conn = get_db()
     cursor = conn.cursor()
@@ -392,6 +393,7 @@ def download_all_qr():
     return send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name='qr_codes.zip')
 
 @app.route('/start_count', methods=['POST'])
+@login_required
 def start_count():
     if 'file' not in request.files:
         return jsonify({'error': 'Dosya bulunamadı'}), 400
@@ -447,6 +449,7 @@ def start_count():
         return jsonify({'error': f'Hata: {str(e)}'}), 500
 
 @app.route('/get_count_status')
+@login_required
 def get_count_status():
     conn = get_db()
     cursor = conn.cursor()
@@ -464,6 +467,10 @@ def get_count_status():
 
 @socketio.on('scan_qr')
 def handle_scan(data):
+    if 'user_id' not in session:
+        emit('scan_result', {'success': False, 'message': 'Giriş yapmanız gerekiyor'})
+        return
+    
     qr_id = data.get('qr_id')
     
     conn = get_db()
@@ -512,6 +519,7 @@ def handle_scan(data):
     }, broadcast=True)
 
 @app.route('/finish_count', methods=['POST'])
+@login_required
 def finish_count():
     conn = get_db()
     cursor = conn.cursor()
@@ -577,6 +585,7 @@ def finish_count():
     })
 
 @app.route('/download_report/<filename>')
+@login_required
 def download_report(filename):
     if not re.match(r'^sayim_raporu_[a-f0-9]{8}\.xlsx$', filename):
         return jsonify({'error': 'Geçersiz dosya adı'}), 400

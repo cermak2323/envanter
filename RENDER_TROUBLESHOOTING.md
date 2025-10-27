@@ -19,28 +19,53 @@ Render.com Web Service ayarlarınızda **Start Command**'i şu şekilde değişt
 chmod +x start.sh && ./start.sh
 ```
 
-**Yeni (Çalışır):**
+**Yeni (Test Edilecek):**
 ```bash
-python startup.py
+python3 startup.py
+```
+
+**Alternative Startup Commands (Deneyin):**
+```bash
+# Option 1: Direct Python3
+python3 run_direct.py
+
+# Option 2: Bash script with detection
+chmod +x start_robust.sh && ./start_robust.sh
+
+# Option 3: Module approach
+python3 -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+
+# Option 4: Direct Flask
+python3 app.py
 ```
 
 ### 🚀 Alternative Start Commands
 
 Eğer `python startup.py` çalışmazsa, bu seçenekleri deneyin:
 
-#### Option 1: Direct Gunicorn
+#### Option 1: Python3 Direct (EN ÖNERİLEN)
 ```bash
-python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+python3 startup.py
 ```
 
-#### Option 2: System Gunicorn
+#### Option 2: Simple Direct Run
 ```bash
-gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+python3 run_direct.py
 ```
 
-#### Option 3: Direct Python
+#### Option 3: Robust Bash Script
 ```bash
-python app.py
+chmod +x start_robust.sh && ./start_robust.sh
+```
+
+#### Option 4: Direct Gunicorn
+```bash
+python3 -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+```
+
+#### Option 5: Flask Development
+```bash
+python3 app.py
 ```
 
 ## 🔍 Render.com'da Start Command Nasıl Değiştirilir

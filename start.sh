@@ -9,6 +9,13 @@ echo "DATABASE_URL: ${DATABASE_URL:0:20}..."
 echo "SESSION_SECRET: ${SESSION_SECRET:0:10}..."
 echo "B2_APPLICATION_KEY_ID: ${B2_APPLICATION_KEY_ID:0:10}..."
 
+# Python version check
+echo "🐍 Python environment check..."
+which python3
+python3 --version
+which pip3
+pip3 --version
+
 # Create necessary directories
 echo "📁 Creating directories..."
 mkdir -p logs
@@ -23,7 +30,7 @@ chmod 755 static/temp
 
 # Database check and setup
 echo "🗄️ Database setup..."
-python -c "
+python3 -c "
 try:
     import psycopg2
     import os
@@ -39,4 +46,4 @@ except Exception as e:
 
 # Start the application
 echo "🌐 Starting application..."
-exec gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 app:app
+exec python3 -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 app:app

@@ -16,7 +16,7 @@ git push origin main
 4. Settings:
    - **Name**: `envanterqr-app`
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `chmod +x start.sh && ./start.sh`
+   - **Start Command**: `python startup.py`
 
 ### 3. Environment Variables Ekle
 Render Web Service → **Environment** sekmesinde:

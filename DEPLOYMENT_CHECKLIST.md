@@ -1,4 +1,15 @@
-# 🚀 Render.com Deployment Checklist
+# ✅ Render.com Deployment Checklist
+
+## 🔄 HIZLI ÇÖZÜM (Şu Anda Yapmanız Gereken)
+
+### 1. Render.com Start Command Değiştir
+- ❌ **Eski**: `chmod +x start.sh && ./start.sh`
+- ✅ **Yeni**: `python startup.py`
+
+### 2. Redeploy Et
+"Deploy Latest Commit" butonuna bas
+
+---
 
 ## ✅ Pre-Deploy Kontrol Listesi
 
@@ -44,7 +55,7 @@ git push origin main
    - **Name**: `envanterqr-app`
    - **Runtime**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `chmod +x start.sh && ./start.sh`
+   - **Start Command**: `python startup.py` 🎯 **ÖNEMLİ DEĞİŞİKLİK**
 
 ### 3. PostgreSQL Database
 1. "New +" → "PostgreSQL"

@@ -23,7 +23,14 @@ Bu kılavuz EnvanterQR sisteminin Render.com'a deploy edilmesi için gerekli ad�
 Name: envanterqr-app
 Runtime: Python 3
 Build Command: pip install -r requirements.txt
-Start Command: chmod +x start.sh && ./start.sh
+Start Command: python startup.py
+```
+
+**Alternative Start Commands** (eğer yukarıdaki çalışmazsa):
+```
+Option 1: python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+Option 2: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+Option 3: python app.py
 ```
 
 ### 🗄️ 2. Mevcut Database Connection

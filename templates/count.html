@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Sayım Ekranı - Cermak Envanter Sistemi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cermak-primary: #dc3545;
+            --cermak-primary-dark: #c82333;
+            --cermak-success: #28a745;
+            --cermak-warning: #ffc107;
+            --cermak-info: #17a2b8;
+            --gradient-primary: linear-gradient(135deg, #dc3545 0%, #c82333 50%, #bd2130 100%);
+            --gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            --shadow-soft: 0 2px 20px rgba(0,0,0,0.08);
+            --shadow-medium: 0 4px 30px rgba(0,0,0,0.12);
+            --shadow-strong: 0 8px 40px rgba(0,0,0,0.16);
+            --border-radius: 20px;
+            --border-radius-lg: 25px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gradient-bg);
+            min-height: 100vh;
+            color: #2d3748;
+            padding: 1rem;
+            padding-bottom: 100px; /* Space for fixed finish button */
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 0 0.5rem;
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--gradient-primary);
+            border-radius: var(--border-radius);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-medium);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-header {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-header:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            min-height: 0;
+        }
+
+        /* QR Scanner */
+        .scanner-section {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .scanner-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .scanner-icon {
+            font-size: 2rem;
+            color: var(--cermak-primary);
+            background: rgba(220, 53, 69, 0.1);
+            padding: 0.75rem;
+            border-radius: 15px;
+        }
+
+        .scanner-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        #reader {
+            border-radius: 15px;
+            overflow: hidden;
+            flex: 1;
+            min-height: 300px;
+            max-height: 400px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-scanner {
+            flex: 1;
+            min-width: 120px;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-start {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            color: white;
+        }
+
+        .btn-stop {
+            background: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .btn-stop:hover {
+            background: #5a6268;
+            color: white;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .progress-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .progress-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--cermak-primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .progress-bar-container {
+            background: linear-gradient(145deg, #e3e7eb, #f8fafb);
+            border-radius: 30px;
+            height: 50px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                inset 4px 4px 8px rgba(174, 179, 186, 0.4),
+                inset -4px -4px 8px rgba(255, 255, 255, 0.8),
+                0 2px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .progress-bar-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #667eea 50%, #f093fb 75%, #f5576c 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 3s ease infinite;
+            height: 100%;
+            border-radius: 28px;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 
+                0 4px 15px rgba(102, 126, 234, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            min-width: 0%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 0%;
+        }
+
+        .progress-text {
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            letter-spacing: 1px;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .detailed-stats {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .time-info {
+            font-size: 0.85rem;
+        }
+
+        .time-info small {
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        /* Activity Timeline */
+        .activity-timeline {
+            background: #f8f9fa;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+            animation: slideInActivity 0.3s ease;
+        }
+        
+        .activity-item:hover {
+            background: #f1f3f4;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--cermak-success);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .activity-title {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            word-break: break-word;
+        }
+        
+        .activity-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: #6c757d;
+            flex-wrap: wrap;
+        }
+        
+        .activity-user {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .activity-time {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        @keyframes slideInActivity {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Scan Messages */
+        .scan-messages {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .scan-message {
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+
+        .scan-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid var(--cermak-success);
+        }
+
+        .scan-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid var(--cermak-primary);
+        }
+
+        .scan-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid var(--cermak-warning);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Finish Button */
+        .finish-section {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .finish-section-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+            border-top: 2px solid rgba(231, 76, 60, 0.2);
+            padding: 1.5rem;
+            z-index: 1000;
+            box-shadow: 
+                0 -8px 32px rgba(0,0,0,0.12),
+                0 -2px 8px rgba(231, 76, 60, 0.08);
+        }
+
+        .btn-finish {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 50%, #e74c3c 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-height: 60px;
+        }
+
+        .btn-finish:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-finish:hover:before {
+            left: 100%;
+        }
+
+        .btn-finish:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(231, 76, 60, 0.4);
+            color: white;
+        }
+
+        .btn-finish:active {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-finish i {
+            font-size: 1.3rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .app-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-actions {
+                justify-content: center;
+            }
+
+            .scanner-section, .progress-section {
+                padding: 1rem;
+            }
+
+            #reader {
+                min-height: 250px;
+                max-height: 300px;
+            }
+
+            .scanner-controls {
+                flex-direction: column;
+            }
+
+            .btn-scanner {
+                min-width: auto;
+            }
+
+            .progress-stats {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .app-container {
+                padding: 0;
+            }
+
+            .app-header {
+                padding: 1rem;
+                border-radius: 15px;
+            }
+
+            .header-title {
+                font-size: 1.25rem;
+            }
+
+            .btn-header {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Camera Overlay */
+        .camera-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            border: 3px solid var(--cermak-primary);
+            border-radius: 15px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .camera-overlay::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 2px solid rgba(220, 53, 69, 0.3);
+            border-radius: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .btn-cermak:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220,53,69,0.3);
+            color: white;
+        }
+        
+        #reader {
+            max-width: 100%;
+            height: 300px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px dashed #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+        
+        #reader.active {
+            border-color: var(--cermak-red);
+            background: white;
+        }
+        
+        .scan-message {
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 5px 0;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .scan-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .scan-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--cermak-red);
+        }
+        
+        .stats-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        
+        .progress-custom {
+            height: 25px;
+            border-radius: 15px;
+            background-color: #e9ecef;
+        }
+        
+        .progress-bar-custom {
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
+            border-radius: 15px;
+            line-height: 25px;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .scan-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .scan-item {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--cermak-red);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .scan-item-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        
+        .camera-placeholder {
+            color: #6c757d;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .camera-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .user-badge {
+            background: white;
+            color: var(--cermak-red);
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-title">
+                <i class="bi bi-camera"></i>
+                <div>
+                    <div>Sayım Ekranı</div>
+                    <small style="font-size: 0.875rem; opacity: 0.9;" id="sessionInfo">Oturum ID: -</small>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="btn-header" style="cursor: default;">
+                    <i class="bi bi-person-circle"></i>
+                    <span id="userName">-</span>
+                </span>
+                <button class="btn-header" onclick="goToMain()">
+                    <i class="bi bi-house"></i>
+                    Ana Sayfa
+                </button>
+                <button class="btn-header" onclick="goToReports()">
+                    <i class="bi bi-file-earmark-text"></i>
+                    Raporlar
+                </button>
+                <button class="btn-header" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Çıkış
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- QR Scanner Section -->
+            <div class="scanner-section">
+                <div class="scanner-header">
+                    <i class="bi bi-camera scanner-icon"></i>
+                    <div>
+                        <h3 class="scanner-title">QR Kod Okuyucu</h3>
+                        <p class="text-muted mb-0">QR kodunu kamera görüş alanına tutun</p>
+                    </div>
+                </div>
+                
+                <div id="reader">
+                    <div class="text-center text-muted camera-placeholder">
+                        <i class="bi bi-camera-video-off" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h5>Kamera Kapalı</h5>
+                        <p>QR kod okutmak için kamerayı başlatın</p>
+                        <small class="text-warning" id="cameraInfo" style="display: none;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Kamera için localhost kullanın veya manuel giriş yapın
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="scanner-controls">
+                    <button class="btn-scanner btn-start" id="startCameraBtn" onclick="startCamera()">
+                        <i class="bi bi-camera-video"></i>
+                        Kamerayı Başlat
+                    </button>
+                    <button class="btn-scanner btn-stop" id="stopCameraBtn" onclick="stopCamera()" style="display: none;">
+                        <i class="bi bi-camera-video-off"></i>
+                        Kamerayı Durdur
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <div class="progress-header">
+                    <div class="mb-3">
+                        <h3 class="progress-title">Sayım İlerlemesi</h3>
+                    </div>
+                    
+                    <!-- Ana İstatistikler -->
+                    <div class="progress-stats mb-3">
+                        <div class="stat-item">
+                            <div class="stat-number text-primary" id="scannedCount">0</div>
+                            <div class="stat-label">Okutulan</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number text-info" id="expectedCount">0</div>
+                            <div class="stat-label">Beklenen</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number text-success" id="accuracyRate">0%</div>
+                            <div class="stat-label">Tamamlama</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detaylı İstatistikler -->
+                    <div class="detailed-stats">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Bugünkü Tarama</small>
+                                <strong id="todayScans">0</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Ortalama/Saat</small>
+                                <strong id="avgPerHour">0</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Tahmini Kalan</small>
+                                <strong id="estimatedRemaining">--</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gelişmiş Progress Bar -->
+                <div class="progress-bar-container mb-3">
+                    <div class="progress-bar-fill" id="progressBar">
+                        <span class="progress-text" id="progressText">0%</span>
+                    </div>
+                </div>
+                
+                <!-- Zaman Çizelgesi -->
+                <div class="time-info mb-3">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Başlangıç:</small>
+                            <div id="startTime">--</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Son Tarama:</small>
+                            <div id="lastScanTime">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- QR Okuma Hareketleri -->
+                <div class="card mb-3">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <h6 class="mb-0">
+                            <i class="bi bi-activity me-2"></i>
+                            QR OKUNMA HAREKETLERİ
+                        </h6>
+                        <span class="badge bg-primary" id="activityCount">0</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="activity-timeline" id="activityTimeline" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-center text-muted" style="padding: 2rem;">
+                                <i class="bi bi-clock-history" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p>QR okuma geçmişi burada görünecek</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="scan-messages" id="scanMessages">
+                    <div class="text-center text-muted" style="padding: 2rem;">
+                        <i class="bi bi-qr-code-scan" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p>QR kod okutmaya başladığınızda mesajlar burada görünecek</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+                            <div id="partDetails">
+                                <small class="text-muted">-</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finish Section - Alt Kısım -->
+    <div class="finish-section-bottom">
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <button class="btn-finish w-100" onclick="finishCount()">
+                        <i class="bi bi-stop-circle"></i>
+                        Sayımı Bitir ve Rapor Al
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        console.log('Count page JavaScript loading...');
+        console.log('Sayfa URL:', window.location.href);
+        console.log('HTTPS kullanılıyor mu:', window.location.protocol === 'https:');
+        console.log('Localhost mu:', window.location.hostname === 'localhost');
+        
+        // IP adresi kontrolü ve yönlendirme fonksiyonu
+        function checkSecureContext() {
+            // IP adresi ile erişiliyorsa localhost'a yönlendir
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== 'https:') {
+                const currentPath = window.location.pathname + window.location.search;
+                const localhostUrl = `http://localhost:5000${currentPath}`;
+                
+                // Kullanıcıya seçenek sun
+                if (confirm('Kamera özelliği için localhost kullanılması gerekiyor. Localhost\'a yönlendirilsin mi?\n\n' + localhostUrl)) {
+                    window.location.href = localhostUrl;
+                    return;
+                }
+            }
+        }
+        
+        // Sayfa yüklendiğinde kontrol et
+        checkSecureContext();
+        
+        const socket = io();
+        let html5QrCode = null;
+        let currentCameraIndex = 0;
+        let availableCameras = [];
+        let sessionStats = {
+            scanned: 0,
+            expected: 0,
+            scannedItems: [],
+            startTime: null,
+            todayScans: 0,
+            totalDuration: 0
+        };
+
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadSessionStats();
+            getCameras();
+            
+            // Session başlangıç zamanını al
+            sessionStats.startTime = new Date();
+            updateTimeDisplay();
+            
+            // Her dakika zaman güncellemesi
+            setInterval(updateTimeDisplay, 60000);
+        });
+
+        async function checkAuth() {
+            const response = await fetch('/check_auth');
+            const data = await response.json();
+            if (data.authenticated) {
+                document.getElementById('userName').textContent = data.full_name;
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // WebSocket Bağlantıları
+        socket.on('connect', function() {
+            console.log('WebSocket bağlandı');
+            loadSessionStats();
+        });
+
+        socket.on('scan_result', function(data) {
+            addScanMessage(data);
+            if (data.success) {
+                updateStats(data);
+                addActivityItem(data);
+            }
+        });
+
+        socket.on('count_finished', function(data) {
+            showAlert('Sayım tamamlandı! Rapor sayfasına yönlendiriliyorsunuz...', 'success');
+            setTimeout(() => {
+                window.location.href = '/reports';
+            }, 2000);
+        });
+
+        async function checkAuth() {
+            const response = await fetch('/check_auth');
+            const data = await response.json();
+            if (data.authenticated) {
+                document.getElementById('userName').textContent = data.full_name;
+                // Session ID'yi de göster
+                const sessionResponse = await fetch('/get_count_status');
+                const sessionData = await sessionResponse.json();
+                if (sessionData.active && sessionData.session_id) {
+                    document.getElementById('sessionInfo').textContent = `Oturum ID: ${sessionData.session_id.substring(0, 8)}...`;
+                }
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        async function loadSessionStats() {
+            try {
+                const response = await fetch('/get_session_stats');
+                const data = await response.json();
+                
+                sessionStats.scanned = data.scanned || 0;
+                sessionStats.expected = data.expected || 0;
+                
+                updateStatsDisplay();
+                loadRecentActivities();
+            } catch (error) {
+                console.error('İstatistikler yüklenirken hata:', error);
+            }
+        }
+
+        async function loadRecentActivities() {
+            try {
+                const response = await fetch('/get_recent_activities');
+                const data = await response.json();
+                
+                if (data.success && data.activities) {
+                    const timeline = document.getElementById('activityTimeline');
+                    const activityCount = document.getElementById('activityCount');
+                    
+                    // Mevcut placeholder'ı temizle
+                    timeline.innerHTML = '';
+                    
+                    // Aktiviteleri ekle
+                    data.activities.forEach(activity => {
+                        const activityDiv = document.createElement('div');
+                        activityDiv.className = 'activity-item';
+                        
+                        // Tarih formatı
+                        const scanTime = new Date(activity.scanned_at);
+                        const timeStr = scanTime.toLocaleTimeString('tr-TR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        });
+                        
+                        activityDiv.innerHTML = `
+                            <div class="activity-icon">
+                                <i class="bi bi-qr-code"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">${activity.qr_code}</div>
+                                <div class="activity-meta">
+                                    <span class="activity-user">
+                                        <i class="bi bi-person-fill"></i>
+                                        ${activity.scanned_by}
+                                    </span>
+                                    <span class="activity-time">
+                                        <i class="bi bi-clock"></i>
+                                        ${timeStr}
+                                    </span>
+                                    ${activity.part_name ? `<span><i class="bi bi-tag"></i> ${activity.part_name}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        
+                        timeline.appendChild(activityDiv);
+                    });
+                    
+                    // Aktivite sayısını güncelle
+                    activityCount.textContent = data.activities.length;
+                }
+            } catch (error) {
+                console.error('Aktiviteler yüklenirken hata:', error);
+            }
+        }
+
+        function updateStatsDisplay() {
+            // sessionStats kontrolü
+            if (!sessionStats || sessionStats.scanned === undefined) {
+                console.warn('sessionStats henüz yüklenmedi');
+                return;
+            }
+            
+            // Ana istatistikler
+            document.getElementById('scannedCount').textContent = sessionStats.scanned;
+            document.getElementById('expectedCount').textContent = sessionStats.expected;
+            
+            // Progress hesaplama
+            const progress = sessionStats.expected > 0 ? 
+                (sessionStats.scanned / sessionStats.expected * 100) : 0;
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
+            if (progressText) {
+                progressText.textContent = `${Math.round(progress)}%`;
+            }
+            
+            // Accuracy rate
+            document.getElementById('accuracyRate').textContent = `${Math.round(progress)}%`;
+            
+            // Gelişmiş istatistikler
+            updateDetailedStats();
+            updateTimeDisplay();
+        }
+
+        function updateDetailedStats() {
+            const now = new Date();
+            
+            // Bugünkü taramalar (son 24 saat)
+            const last24Hours = sessionStats.scannedItems.filter(item => {
+                const itemTime = new Date(item.time);
+                return (now - itemTime) < (24 * 60 * 60 * 1000);
+            });
+            document.getElementById('todayScans').textContent = last24Hours.length;
+            
+            // Ortalama tarama/saat
+            if (sessionStats.startTime) {
+                const hoursElapsed = (now - sessionStats.startTime) / (1000 * 60 * 60);
+                const avgPerHour = hoursElapsed > 0 ? Math.round(sessionStats.scanned / hoursElapsed) : 0;
+                document.getElementById('avgPerHour').textContent = avgPerHour;
+                
+                // Tahmini kalan süre
+                if (avgPerHour > 0 && sessionStats.expected > sessionStats.scanned) {
+                    const remaining = sessionStats.expected - sessionStats.scanned;
+                    const hoursRemaining = remaining / avgPerHour;
+                    document.getElementById('estimatedRemaining').textContent = formatDuration(hoursRemaining * 60);
+                } else {
+                    document.getElementById('estimatedRemaining').textContent = '--';
+                }
+            }
+        }
+
+        function updateTimeDisplay() {
+            // Süre gösterimi kaldırıldı - sadece gerekli zamanları güncelle
+        }
+
+        function formatDuration(minutes) {
+            if (minutes < 60) {
+                return `${Math.round(minutes)} dk`;
+            } else if (minutes < 1440) {
+                const hours = Math.round(minutes / 60);
+                return `${hours} saat`;
+            } else {
+                const days = Math.round(minutes / 1440);
+                return `${days} gün`;
+            }
+        }
+
+        function updateStats(data) {
+            if (data.success) {
+                sessionStats.scanned++;
+                updateStatsDisplay();
+            }
+        }
+
+        // Kamera Fonksiyonları
+        async function getCameras() {
+            try {
+                // Güvenli bağlam kontrolü
+                if (!window.isSecureContext) {
+                    throw new Error('Güvenli bağlam gerekiyor (HTTPS veya localhost)');
+                }
+                
+                availableCameras = await Html5Qrcode.getCameras();
+                console.log('Kameralar bulundu:', availableCameras.length);
+                
+                if (availableCameras.length === 0) {
+                    addScanMessage({
+                        success: false,
+                        message: 'Kamera bulunamadı'
+                    });
+                }
+            } catch (err) {
+                console.error('Kamera listesi alınamadı:', err);
+                
+                let message = 'Kamera erişimi hatası';
+                if (err.message.includes('secure context') || err.message.includes('https')) {
+                    message = 'HTTPS veya localhost kullanmanız gerekiyor';
+                } else if (err.name === 'NotAllowedError') {
+                    message = 'Kamera erişim izni reddedildi';
+                } else if (err.name === 'NotFoundError') {
+                    message = 'Kamera bulunamadı';
+                }
+                
+                addScanMessage({
+                    success: false,
+                    message: message
+                });
+                
+                // Kamera butonlarını devre dışı bırak ve manuel giriş seçeneği ekle
+                const startBtn = document.querySelector('.btn-start');
+                const cameraInfo = document.getElementById('cameraInfo');
+                
+                if (startBtn) {
+                    startBtn.disabled = true;
+                    startBtn.textContent = 'Kamera Kullanılamaz';
+                }
+                if (cameraInfo) {
+                    cameraInfo.style.display = 'block';
+                }
+                
+                // Manuel QR kod giriş butonu ekle
+                const scannerControls = document.querySelector('.scanner-controls');
+                if (scannerControls && !document.querySelector('.btn-manual')) {
+                    const manualBtn = document.createElement('button');
+                    manualBtn.className = 'btn btn-warning btn-scanner btn-manual';
+                    manualBtn.innerHTML = '<i class="bi bi-keyboard"></i> Manuel Giriş';
+                    manualBtn.onclick = showManualInput;
+                    scannerControls.appendChild(manualBtn);
+                }
+            }
+        }
+
+        async function startCamera() {
+            if (html5QrCode) {
+                return;
+            }
+
+            if (availableCameras.length === 0) {
+                await getCameras();
+                if (availableCameras.length === 0) {
+                    addScanMessage({
+                        success: false,
+                        message: 'Hiç kamera bulunamadı'
+                    });
+                    return;
+                }
+            }
+
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                const cameraId = availableCameras[currentCameraIndex].id;
+                
+                await html5QrCode.start(
+                    cameraId,
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    (decodedText, decodedResult) => {
+                        socket.emit('scan_qr', { qr_id: decodedText });
+                    },
+                    (errorMessage) => {
+                        // Sessizce hata mesajlarını göz ardı et
+                    }
+                );
+
+                document.getElementById('reader').classList.add('active');
+                document.getElementById('startCameraBtn').style.display = 'none';
+                document.getElementById('stopCameraBtn').style.display = 'inline-block';
+                
+                addScanMessage({
+                    success: true,
+                    message: 'Kamera başlatıldı. QR kodları okutabilirsiniz.'
+                });
+
+            } catch (err) {
+                console.error('Kamera başlatılamadı:', err);
+                addScanMessage({
+                    success: false,
+                    message: 'Kamera başlatılamadı: ' + err.message
+                });
+            }
+        }
+
+        async function stopCamera() {
+            if (html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode = null;
+                    
+                    document.getElementById('reader').classList.remove('active');
+                    document.getElementById('reader').innerHTML = `
+                        <div class="camera-placeholder">
+                            <i class="bi bi-camera-video-off"></i>
+                            <h5>Kamera Kapalı</h5>
+                            <p>QR kod okutmak için kamerayı açın</p>
+                        </div>
+                    `;
+                    
+                    document.getElementById('startCameraBtn').style.display = 'inline-block';
+                    document.getElementById('stopCameraBtn').style.display = 'none';
+                    
+                    addScanMessage({
+                        success: true,
+                        message: 'Kamera durduruldu.'
+                    });
+                } catch (err) {
+                    console.error('Kamera durdurulamadı:', err);
+                }
+            }
+        }
+
+        // İstatistik Fonksiyonları
+        async function loadSessionStats() {
+            try {
+                const response = await fetch('/get_session_stats');
+                const data = await response.json();
+                if (data.success) {
+                    // API'den gelen data yapısını düzelt
+                    sessionStats = {
+                        scanned: data.scanned || 0,
+                        expected: data.expected || 0,
+                        scannedItems: []
+                    };
+                    updateStatsDisplay();
+                } else {
+                    console.warn('Session stats boş veya geçersiz:', data);
+                    // Varsayılan değerler
+                    sessionStats = {
+                        scanned: 0,
+                        expected: 0,
+                        scannedItems: []
+                    };
+                    updateStatsDisplay();
+                }
+            } catch (error) {
+                console.error('İstatistikler yüklenemedi:', error);
+                // Varsayılan değerler
+                sessionStats = {
+                    scanned: 0,
+                    expected: 0,
+                    scannedItems: []
+                };
+                updateStatsDisplay();
+            }
+        }
+
+        function updateStats(scanData) {
+            sessionStats.scanned++;
+            sessionStats.scannedItems.push({
+                part_code: scanData.part_code,
+                part_name: scanData.part_name,
+                scanned_by: scanData.scanned_by,
+                scanned_at: scanData.scanned_at,
+                time: new Date()
+            });
+            updateStatsDisplay();
+        }
+
+        function updateStatsDisplay() {
+            // sessionStats kontrolü
+            if (!sessionStats || sessionStats.scanned === undefined) {
+                console.warn('sessionStats henüz yüklenmedi');
+                return;
+            }
+            
+            document.getElementById('scannedCount').textContent = sessionStats.scanned;
+            document.getElementById('expectedCount').textContent = sessionStats.expected;
+            
+            const progress = sessionStats.expected > 0 ? 
+                (sessionStats.scanned / sessionStats.expected * 100) : 0;
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressBar.style.width = Math.min(progress, 100) + '%';
+            if (progressText) {
+                progressText.textContent = Math.round(progress) + '%';
+            }
+            
+            updatePartDetails();
+        }
+
+        function updatePartDetails() {
+            const detailsDiv = document.getElementById('partDetails');
+            if (sessionStats.scannedItems.length === 0) {
+                detailsDiv.innerHTML = '<small class="text-muted">-</small>';
+            } else {
+                const lastItem = sessionStats.scannedItems[sessionStats.scannedItems.length - 1];
+                detailsDiv.innerHTML = `
+                    <div>
+                        <strong>${lastItem.part_code}</strong><br>
+                        <small class="text-muted">${lastItem.part_name}</small><br>
+                        <small class="text-info">
+                            <i class="bi bi-person"></i> ${lastItem.scanned_by || 'Bilinmeyen'} 
+                            ${lastItem.scanned_at ? '- ' + lastItem.scanned_at : ''}
+                        </small>
+                    </div>
+                `;
+            }
+        }
+
+        function addToScanHistory(scanData) {
+            const historyDiv = document.getElementById('scanHistory');
+            const scanItem = document.createElement('div');
+            scanItem.className = 'scan-item';
+            scanItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${scanData.part_name}</strong><br>
+                        <small class="text-muted">${scanData.part_code}</small>
+                    </div>
+                    <span class="scan-item-time">${new Date().toLocaleTimeString('tr-TR')}</span>
+                </div>
+            `;
+            
+            if (historyDiv.querySelector('.text-center')) {
+                historyDiv.innerHTML = '';
+            }
+            
+            historyDiv.insertBefore(scanItem, historyDiv.firstChild);
+            
+            // En fazla 10 öğe göster
+            while (historyDiv.children.length > 10) {
+                historyDiv.removeChild(historyDiv.lastChild);
+            }
+        }
+
+        function addScanMessage(data) {
+            const messagesDiv = document.getElementById('scanMessages');
+            
+            // İlk kez mesaj ekleniyorsa placeholder'ı temizle
+            if (messagesDiv.querySelector('.text-center')) {
+                messagesDiv.innerHTML = '';
+            }
+            
+            const messageDiv = document.createElement('div');
+            
+            if (data.success) {
+                messageDiv.className = 'scan-message scan-success';
+                messageDiv.innerHTML = `
+                    <i class="bi bi-check-circle-fill"></i>
+                    <div>
+                        <strong>Başarılı!</strong><br>
+                        <small>${data.message}</small>
+                    </div>
+                `;
+            } else {
+                messageDiv.className = 'scan-message scan-error';
+                messageDiv.innerHTML = `
+                    <i class="bi bi-x-circle-fill"></i>
+                    <div>
+                        <strong>Hata!</strong><br>
+                        <small>${data.message}</small>
+                    </div>
+                `;
+            }
+            
+            messagesDiv.insertBefore(messageDiv, messagesDiv.firstChild);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (messageDiv.parentElement) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+            
+            // En fazla 5 mesaj göster
+            while (messagesDiv.children.length > 5) {
+                messagesDiv.removeChild(messagesDiv.lastChild);
+            }
+        }
+
+        function addActivityItem(data) {
+            const timeline = document.getElementById('activityTimeline');
+            const activityCount = document.getElementById('activityCount');
+            
+            // İlk kez aktivite ekleniyorsa placeholder'ı temizle
+            if (timeline.querySelector('.text-center')) {
+                timeline.innerHTML = '';
+            }
+            
+            const activityDiv = document.createElement('div');
+            activityDiv.className = 'activity-item';
+            
+            // Tarih formatı
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('tr-TR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            activityDiv.innerHTML = `
+                <div class="activity-icon">
+                    <i class="bi bi-qr-code"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">${data.qr_code || 'QR Kod'}</div>
+                    <div class="activity-meta">
+                        <span class="activity-user">
+                            <i class="bi bi-person-fill"></i>
+                            ${data.scanned_by || 'Bilinmeyen'}
+                        </span>
+                        <span class="activity-time">
+                            <i class="bi bi-clock"></i>
+                            ${timeStr}
+                        </span>
+                        ${data.part_name ? `<span><i class="bi bi-tag"></i> ${data.part_name}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            timeline.insertBefore(activityDiv, timeline.firstChild);
+            
+            // Aktivite sayısını güncelle
+            const currentCount = parseInt(activityCount.textContent) || 0;
+            activityCount.textContent = currentCount + 1;
+            
+            // En fazla 20 aktivite göster
+            while (timeline.children.length > 20) {
+                timeline.removeChild(timeline.lastChild);
+            }
+        }
+
+        // Sayım Bitirme
+        async function finishCount() {
+            // show finish confirmation modal
+            const finishModalEl = document.getElementById('finishCountModal');
+            const finishModal = new bootstrap.Modal(finishModalEl);
+            finishModal.show();
+        }
+
+        function showAlert(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type === 'danger' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
+            alert.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 350px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                border-radius: 15px;
+                border: none;
+            `;
+            
+            const icon = type === 'danger' ? 'x-circle' : type === 'success' ? 'check-circle' : 'info-circle';
+            alert.innerHTML = `
+                <i class="bi bi-${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentElement) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Navigasyon
+        function goToMain() {
+            if (html5QrCode) {
+                stopCamera().then(() => {
+                    window.location.href = '/';
+                });
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        function goToReports() {
+            if (html5QrCode) {
+                stopCamera().then(() => {
+                    window.location.href = '/reports';
+                });
+            } else {
+                window.location.href = '/reports';
+            }
+        }
+
+        async function logout() {
+            if (html5QrCode) {
+                await stopCamera();
+            }
+            await fetch('/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        // Manuel QR Kod Girişi
+        function showManualInput() {
+            const qrCode = prompt('QR Kod değerini girin:');
+            if (qrCode && qrCode.trim()) {
+                // QR kod tarama simülasyonu
+                socket.emit('scan_qr', {qr_id: qrCode.trim()});
+                
+                addScanMessage({
+                    success: true,
+                    message: `Manuel giriş: ${qrCode.trim()}`
+                });
+            }
+        }
+
+        // Sayfa yüklendiğinde tüm fonksiyonları global scope'a ekle
+        function initializeGlobalFunctions() {
+            window.goToMain = goToMain;
+            window.goToReports = goToReports;
+            window.logout = logout;
+            window.finishCount = finishCount;
+            window.startCamera = startCamera;
+            window.showManualInput = showManualInput;
+            console.log('Fonksiyonlar global scope\'a eklendi');
+        }
+        
+        // Hemen çalıştır
+        initializeGlobalFunctions();
+
+        // Sayfa kapatılırken kamerayı durdur
+        window.addEventListener('beforeunload', function() {
+            if (html5QrCode) {
+                stopCamera();
+            }
+        });
+
+        // Fonksiyonları tekrar global scope'a ekle (güvenlik için)
+        setTimeout(() => {
+            initializeGlobalFunctions();
+            console.log('Tüm fonksiyonlar tekrar global scope\'a eklendi');
+        }, 100);
+    </script>
+
+        <!-- Finish Count Modal -->
+        <div class="modal fade" id="finishCountModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title">Sayımı Bitir</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p>Sayımı bitirmek ve rapor oluşturmak istiyor musunuz?</p>
+                    </div>
+                    <div class="modal-footer justify-content-center border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="button" id="confirmFinishBtn" class="btn btn-danger">Bitir ve Rapor Oluştur</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const confirmBtn = document.getElementById('confirmFinishBtn');
+                confirmBtn && confirmBtn.addEventListener('click', async function() {
+                    const modalEl = document.getElementById('finishCountModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
+                    const finishBtn = document.querySelector('.btn-finish');
+                    const originalContent = finishBtn ? finishBtn.innerHTML : '';
+                    if (finishBtn) {
+                        finishBtn.disabled = true;
+                        finishBtn.innerHTML = '<div class="d-flex align-items-center justify-content-center"><div class="spinner-border spinner-border-sm me-3" role="status"></div><span>RAPOR OLUŞTURULUYOR...</span></div>';
+                    }
+
+                    await stopCamera();
+
+                    try {
+                        const response = await fetch('/finish_count', { method: 'POST' });
+                        const data = await response.json();
+                        if (data.success) {
+                            showAlert(data.message + ' Rapor otomatik olarak indirilecek.', 'success');
+                            setTimeout(() => {
+                                const link = document.createElement('a');
+                                link.href = '/download_report/' + data.report_file;
+                                link.download = data.report_file;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }, 1000);
+                            setTimeout(() => { window.location.href = '/reports'; }, 3000);
+                        } else {
+                            showAlert('Hata: ' + data.error, 'danger');
+                            if (finishBtn) { finishBtn.disabled = false; finishBtn.innerHTML = originalContent; }
+                        }
+                    } catch (error) {
+                        showAlert('Sistem hatası: ' + error.message, 'danger');
+                        if (finishBtn) { finishBtn.disabled = false; finishBtn.innerHTML = originalContent; }
+                    }
+                });
+            });
+        </script>
+</body>
+</html>

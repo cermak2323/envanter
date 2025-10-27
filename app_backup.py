@@ -1,9 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect
 from flask_socketio import SocketIO, emit
 from werkzeug.utils import secure_filename
-from functools import wraps, lru_cache
-import time
-from collections import defaultdict
 import psycopg2
 import psycopg2.extras
 from psycopg2.pool import SimpleConnectionPool
@@ -13,7 +10,7 @@ from io import BytesIO
 import base64
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 import zipfile
 import re
 import hashlib
@@ -21,173 +18,14 @@ import secrets
 import random
 import string
 from dotenv import load_dotenv
-from b2_storage import get_b2_service
-import logging
-import threading
-import json
 
 # Load environment variables
 load_dotenv()
 
-# Logging Configuration
-from logging.handlers import RotatingFileHandler
-import os
-
-# Log klasörü oluştur
-os.makedirs('logs', exist_ok=True)
-
-# Loglama ayarları
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        RotatingFileHandler('logs/app.log', maxBytes=10*1024*1024, backupCount=5),  # 10MB, 5 backup
-        RotatingFileHandler('logs/security.log', maxBytes=5*1024*1024, backupCount=3),  # Security events
-        logging.StreamHandler()
-    ]
-)
-
-# Security logger
-security_logger = logging.getLogger('security')
-security_handler = RotatingFileHandler('logs/security.log', maxBytes=5*1024*1024, backupCount=3)
-security_handler.setFormatter(logging.Formatter('%(asctime)s - SECURITY - %(levelname)s - %(message)s'))
-security_logger.addHandler(security_handler)
-security_logger.setLevel(logging.WARNING)
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
-# Static dosya sıkıştırma için
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 yıl cache
-
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-# ======================
-# MOBIL PERFORMANS OPTIMIZASYONLARI
-# ======================
-
-@app.before_request
-def mobile_optimizations():
-    """Mobil cihazlar için performans optimizasyonları"""
-    # Mobil user agent kontrolü
-    user_agent = request.headers.get('User-Agent', '').lower()
-    is_mobile = any(device in user_agent for device in [
-        'mobile', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'
-    ])
-    
-    # Mobil ise cache header'ları optimize et
-    if is_mobile:
-        request.is_mobile = True
-
-@app.after_request
-def add_performance_headers(response):
-    """Performans için header'lar ekle"""
-    # Static dosyalar için cache
-    if request.endpoint == 'static':
-        response.cache_control.max_age = 31536000  # 1 yıl
-        response.cache_control.public = True
-    
-    # Diğer dosyalar için
-    else:
-        response.cache_control.no_cache = True
-        response.cache_control.must_revalidate = True
-    
-    # Sıkıştırma header'ı
-    if response.status_code == 200 and response.content_length and response.content_length > 1024:
-        response.headers['Vary'] = 'Accept-Encoding'
-    
-    return response
-
-# ======================
-# PERFORMANS CACHE SISTEMI
-# ======================
-
-# Bellek tabanlı cache (production'da Redis kullanılmalı)
-cache_store = {}
-cache_lock = threading.Lock()
-CACHE_TTL = 300  # 5 dakika cache süresi
-
-def cache_get(key):
-    """Cache'den veri al"""
-    with cache_lock:
-        if key in cache_store:
-            data, timestamp = cache_store[key]
-            if time.time() - timestamp < CACHE_TTL:
-                return data
-            else:
-                del cache_store[key]
-    return None
-
-def cache_set(key, value):
-    """Cache'e veri kaydet"""
-    with cache_lock:
-        cache_store[key] = (value, time.time())
-
-def cache_delete(key):
-    """Cache'den veri sil"""
-    with cache_lock:
-        if key in cache_store:
-            del cache_store[key]
-
-def cache_clear():
-    """Tüm cache'i temizle"""
-    with cache_lock:
-        cache_store.clear()
-
-# Cache temizleme thread'i
-def cache_cleanup():
-    """Eski cache verilerini temizle"""
-    while True:
-        time.sleep(60)  # Her dakika kontrol et
-        current_time = time.time()
-        with cache_lock:
-            expired_keys = [
-                key for key, (_, timestamp) in cache_store.items()
-                if current_time - timestamp > CACHE_TTL
-            ]
-            for key in expired_keys:
-                del cache_store[key]
-
-# Cache temizleme thread'ini başlat
-cleanup_thread = threading.Thread(target=cache_cleanup, daemon=True)
-cleanup_thread.start()
-
-# Rate limiting için IP tabanlı takip
-login_attempts = defaultdict(list)
-
-def add_security_headers(response):
-    """Güvenlik header'larını ekle"""
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:;"
-    return response
-
-@app.after_request
-def security_headers(response):
-    return add_security_headers(response)
-
-def rate_limit_login(f):
-    """Login denemelerini sınırla"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', '127.0.0.1'))
-        current_time = time.time()
-        
-        # Son 15 dakikadaki denemeleri filtrele
-        login_attempts[client_ip] = [t for t in login_attempts[client_ip] if current_time - t < 900]
-        
-        # 15 dakikada 5'ten fazla deneme varsa engelle
-        if len(login_attempts[client_ip]) >= 5:
-            return jsonify({'error': 'Çok fazla login denemesi. 15 dakika bekleyin.'}), 429
-        
-        # Denemeyi kaydet
-        login_attempts[client_ip].append(current_time)
-        
-        return f(*args, **kwargs)
-    return decorated_function
 
 # PostgreSQL Configuration
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -201,10 +39,9 @@ def init_db_pool():
     """Initialize database connection pool"""
     global db_pool
     try:
-        # Production ortamı için optimize edilmiş pool ayarları
         db_pool = SimpleConnectionPool(
-            minconn=2,  # Minimum bağlantı sayısı artırıldı
-            maxconn=15, # Maximum bağlantı sayısı artırıldı
+            minconn=1,
+            maxconn=10,
             dsn=DATABASE_URL
         )
         print("✅ PostgreSQL connection pool initialized successfully")
@@ -257,42 +94,8 @@ def close_db(conn):
     except Exception as e:
         print(f"❌ Error returning connection to pool: {e}")
 
-def create_performance_indexes(cursor):
-    """Performans için kritik indexleri oluştur"""
-    indexes = [
-        # Envanter tablosu indexleri
-        "CREATE INDEX IF NOT EXISTS idx_envanter_qr_code ON envanter(qr_code);",
-        "CREATE INDEX IF NOT EXISTS idx_envanter_urun_kodu ON envanter(urun_kodu);",
-        "CREATE INDEX IF NOT EXISTS idx_envanter_created_at ON envanter(created_at);",
-        "CREATE INDEX IF NOT EXISTS idx_envanter_last_scanned ON envanter(last_scanned);",
-        
-        # Sayım geçmişi indexleri
-        "CREATE INDEX IF NOT EXISTS idx_sayim_gecmisi_envanter_id ON sayim_gecmisi(envanter_id);",
-        "CREATE INDEX IF NOT EXISTS idx_sayim_gecmisi_scanned_at ON sayim_gecmisi(scanned_at);",
-        "CREATE INDEX IF NOT EXISTS idx_sayim_gecmisi_user_id ON sayim_gecmisi(user_id);",
-        
-        # Sayım oturum indexleri
-        "CREATE INDEX IF NOT EXISTS idx_sayim_oturum_status ON sayim_oturum(status);",
-        "CREATE INDEX IF NOT EXISTS idx_sayim_oturum_created_at ON sayim_oturum(created_at);",
-        
-        # Kullanıcı indexleri
-        "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);",
-        "CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);",
-        
-        # Composite indexler (çoklu sütun)
-        "CREATE INDEX IF NOT EXISTS idx_envanter_compound ON envanter(qr_code, urun_kodu);",
-        "CREATE INDEX IF NOT EXISTS idx_sayim_compound ON sayim_gecmisi(envanter_id, scanned_at);",
-    ]
-    
-    try:
-        for index_sql in indexes:
-            cursor.execute(index_sql)
-        print("✅ Performance indexes created/verified")
-    except Exception as e:
-        print(f"⚠️ Warning: Could not create some indexes: {e}")
-
 def init_db():
-    """Initialize PostgreSQL database tables and performance indexes"""
+    """Initialize PostgreSQL database tables"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -312,13 +115,10 @@ def init_db():
         
         if not users_table_exists:
             print("⚠️  Database tables not found. Please run the database_schema.sql script first.")
-            print("   Command: psql 'postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb%ssslmode=require&channel_binding=require' -f database_schema.sql")
+            print("   Command: psql 'postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require' -f database_schema.sql")
             return False
         else:
             print("✅ Database tables found")
-        
-        # Create performance indexes if they don't exist
-        create_performance_indexes(cursor)
         
         # Check if default admin user exists, if not create one
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = %s', ('admin',))
@@ -395,70 +195,6 @@ def index():
         return render_template('login.html')
     return render_template('index.html')
 
-@app.route('/api/dashboard/stats')
-@login_required
-def dashboard_stats():
-    """Cache'li dashboard istatistikleri"""
-    cache_key = 'dashboard_stats'
-    
-    # Cache'den kontrol et
-    cached_data = cache_get(cache_key)
-    if cached_data:
-        return jsonify(cached_data)
-    
-    # Cache yoksa veritabanından al
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Toplam QR kod sayısı
-        cursor.execute('SELECT COUNT(*) FROM envanter')
-        total_qr_codes = cursor.fetchone()[0]
-        
-        # Toplam sayım sayısı
-        cursor.execute('SELECT COUNT(*) FROM sayim_gecmisi')
-        total_scans = cursor.fetchone()[0]
-        
-        # Aktif oturum sayısı
-        cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = %s', ('active',))
-        active_sessions = cursor.fetchone()[0]
-        
-        # Son sayım tarihi
-        cursor.execute('SELECT MAX(scanned_at) FROM sayim_gecmisi')
-        last_scan = cursor.fetchone()[0]
-        
-        # Bugünkü sayımlar
-        cursor.execute('''
-            SELECT COUNT(*) FROM sayim_gecmisi 
-            WHERE DATE(scanned_at) = CURRENT_DATE
-        ''')
-        today_scans = cursor.fetchone()[0]
-        
-        # Bu haftaki sayımlar
-        cursor.execute('''
-            SELECT COUNT(*) FROM sayim_gecmisi 
-            WHERE scanned_at >= CURRENT_DATE - INTERVAL '7 days'
-        ''')
-        week_scans = cursor.fetchone()[0]
-        
-        stats = {
-            'total_qr_codes': total_qr_codes,
-            'total_scans': total_scans,
-            'active_sessions': active_sessions,
-            'last_scan': last_scan.isoformat() if last_scan else None,
-            'today_scans': today_scans,
-            'week_scans': week_scans,
-            'cache_time': datetime.now().isoformat()
-        }
-        
-        # Cache'e kaydet
-        cache_set(cache_key, stats)
-        
-        return jsonify(stats)
-        
-    finally:
-        close_db(conn)
-
 @app.route('/count')
 def count_page():
     # Aktif sayım oturumu kontrolü
@@ -478,15 +214,14 @@ def count_page():
     if not session.get('count_access'):
         # Şifre alınmamışsa şifre sayfasını göster
         print("DEBUG /count: count_access yok, count_password.html gösteriliyor")  # DEBUG
-        close_db(conn)
+        conn.close()
         return render_template('count_password.html')
     
     print("DEBUG /count: count_access var, count.html gösteriliyor")  # DEBUG
-    close_db(conn)
+    conn.close()
     return render_template('count.html')
 
 @app.route('/login', methods=['POST'])
-@rate_limit_login
 def login():
     import hashlib
     data = request.get_json()
@@ -562,21 +297,6 @@ def upload_parts():
         conn = get_db()
         cursor = conn.cursor()
         
-        # Mevcut QR kodları için B2'den dosyaları sil
-        try:
-            b2_service = get_b2_service()
-            cursor.execute('SELECT qr_id FROM qr_codes')
-            existing_qr_codes = cursor.fetchall()
-            
-            for row in existing_qr_codes:
-                qr_id = row[0]
-                file_path = f'qr_codes/{qr_id}.png'
-                b2_service.delete_file(file_path)
-                logging.info(f"Deleted QR code from B2: {file_path}")
-                
-        except Exception as e:
-            logging.error(f"Error deleting QR codes from B2: {e}")
-        
         cursor.execute('DELETE FROM parts')
         cursor.execute('DELETE FROM qr_codes')
         
@@ -587,12 +307,12 @@ def upload_parts():
             part_name = str(row['part_name'])
             quantity = int(row['quantity'])
             
-            cursor.execute('INSERT INTO parts (part_code, part_name, quantity) VALUES (%s, %s, %s)',
+            cursor.execute('INSERT INTO parts (part_code, part_name, quantity) VALUES (?, ?, ?)',
                          (part_code, part_name, quantity))
             
             for i in range(quantity):
                 qr_id = f"{part_code}-{uuid.uuid4().hex[:8]}"
-                cursor.execute('INSERT INTO qr_codes (qr_id, part_code, part_name) VALUES (%s, %s, %s)',
+                cursor.execute('INSERT INTO qr_codes (qr_id, part_code, part_name) VALUES (?, ?, ?)',
                              (qr_id, part_code, part_name))
                 qr_codes_data.append({
                     'qr_id': qr_id,
@@ -601,7 +321,7 @@ def upload_parts():
                 })
         
         conn.commit()
-        close_db(conn)
+        conn.close()
         
         return jsonify({
             'success': True,
@@ -625,55 +345,29 @@ def get_qr_codes():
     
     if search:
         # Önce tam eşleşme ara
-        cursor.execute("SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes WHERE part_code = %s OR part_name = %s ORDER BY part_code, qr_id LIMIT %s OFFSET %s", (search, search, limit, offset))
+        cursor.execute("SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes WHERE part_code = ? OR part_name = ? ORDER BY part_code, qr_id LIMIT ? OFFSET ?", (search, search, limit, offset))
         exact_matches = cursor.fetchall()
         
         if exact_matches:
-            qr_codes = []
-            for row in exact_matches:
-                qr_codes.append({
-                    'qr_id': row[0],
-                    'part_code': row[1],
-                    'part_name': row[2],
-                    'is_used': row[3],
-                    'is_downloaded': row[4]
-                })
+            qr_codes = [dict(row) for row in exact_matches]
         else:
             # Tam eşleşme bulunamazsa kısmi eşleşme ara
-            cursor.execute("SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes WHERE part_code LIKE %s OR part_name LIKE %s ORDER BY part_code, qr_id LIMIT %s OFFSET %s", (f'%{search}%', f'%{search}%', limit, offset))
-            rows = cursor.fetchall()
-            qr_codes = []
-            for row in rows:
-                qr_codes.append({
-                    'qr_id': row[0],
-                    'part_code': row[1],
-                    'part_name': row[2],
-                    'is_used': row[3],
-                    'is_downloaded': row[4]
-                })
+            cursor.execute("SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes WHERE part_code LIKE ? OR part_name LIKE ? ORDER BY part_code, qr_id LIMIT ? OFFSET ?", (f'%{search}%', f'%{search}%', limit, offset))
+            qr_codes = [dict(row) for row in cursor.fetchall()]
     else:
         # Arama terimi yoksa tüm QR kodları getir (sayfalama ile)
-        cursor.execute("SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes ORDER BY part_code, qr_id LIMIT %s OFFSET %s", (limit, offset))
-        rows = cursor.fetchall()
-        qr_codes = []
-        for row in rows:
-            qr_codes.append({
-                'qr_id': row[0],
-                'part_code': row[1],
-                'part_name': row[2],
-                'is_used': row[3],
-                'is_downloaded': row[4]
-            })
+        cursor.execute("SELECT qr_id, part_code, part_name, is_used, is_downloaded FROM qr_codes ORDER BY part_code, qr_id LIMIT ? OFFSET ?", (limit, offset))
+        qr_codes = [dict(row) for row in cursor.fetchall()]
     
     # Toplam sayıyı al
     if search:
-        cursor.execute("SELECT COUNT(*) FROM qr_codes WHERE part_code LIKE %s OR part_name LIKE %s", (f'%{search}%', f'%{search}%'))
+        cursor.execute("SELECT COUNT(*) FROM qr_codes WHERE part_code LIKE ? OR part_name LIKE ?", (f'%{search}%', f'%{search}%'))
     else:
         cursor.execute("SELECT COUNT(*) FROM qr_codes")
     
     total_count = cursor.fetchone()[0]
     
-    close_db(conn)
+    conn.close()
     
     return jsonify({
         'qr_codes': qr_codes,
@@ -697,7 +391,7 @@ def mark_qr_used():
         cursor = conn.cursor()
         
         # QR kodunun var olup olmadığını kontrol et
-        cursor.execute('SELECT id, is_used FROM qr_codes WHERE qr_id = %s', (qr_id,))
+        cursor.execute('SELECT id, is_used FROM qr_codes WHERE qr_id = ?', (qr_id,))
         result = cursor.fetchone()
         
         if not result:
@@ -707,9 +401,9 @@ def mark_qr_used():
             return jsonify({'error': 'QR kod zaten kullanılmış'}), 400
             
         # QR kodu kullanıldı olarak işaretle
-        cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE qr_id = %s', (qr_id,))
+        cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE qr_id = ?', (qr_id,))
         conn.commit()
-        close_db(conn)
+        conn.close()
         
         return jsonify({'success': True, 'message': 'QR kod kullanıldı olarak işaretlendi'})
         
@@ -719,140 +413,47 @@ def mark_qr_used():
 @app.route('/generate_qr_image/<qr_id>')
 @login_required
 def generate_qr_image(qr_id):
-    """Optimize edilmiş QR kod oluşturma - cache + B2 storage"""
-    try:
-        # Cache'den kontrol et
-        cache_key = f'qr_image_{qr_id}'
-        cached_image = cache_get(cache_key)
-        
-        if cached_image:
-            buf = BytesIO(cached_image)
-            return send_file(buf, mimetype='image/png')
-        
-        # B2'den QR kod'u indir
-        b2_service = get_b2_service()
-        file_path = f'qr_codes/{qr_id}.png'
-        
-        # B2'den dosyayı kontrol et
-        file_content = b2_service.download_file(file_path)
-        
-        if file_content:
-            # B2'den var olan dosyayı cache'e kaydet ve döndür
-            cache_set(cache_key, file_content)
-            buf = BytesIO(file_content)
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png')
-        else:
-            # QR kod yoksa oluştur - optimize edilmiş ayarlar
-            qr = qrcode.QRCode(
-                version=1, 
-                box_size=8,  # Küçültüldü
-                border=2,    # Küçültüldü
-                error_correction=qrcode.constants.ERROR_CORRECT_L  # Minimum hata düzeltme
-            )
-            qr.add_data(qr_id)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            buf = BytesIO()
-            img.save(buf, format='PNG', optimize=True)  # Optimize edilmiş PNG
-            buf.seek(0)
-            
-            # Cache'e kaydet
-            img_data = buf.getvalue()
-            cache_set(cache_key, img_data)
-            
-            # B2'ye async upload (background'da)
-            threading.Thread(
-                target=lambda: b2_service.upload_file(file_path, img_data, 'image/png'),
-                daemon=True
-            ).start()
-            
-            # Dosyayı döndür
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png')
-            
-    except Exception as e:
-        logging.error(f"Error generating QR image for {qr_id}: {e}")
-        # Hata durumunda basit QR oluştur
-        qr = qrcode.QRCode(version=1, box_size=6, border=1)
-        qr.add_data(qr_id)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        
-        buf = BytesIO()
-        img.save(buf, format='PNG')
-        buf.seek(0)
-        
-        return send_file(buf, mimetype='image/png')
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(qr_id)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    
+    return send_file(buf, mimetype='image/png')
 
 @app.route('/download_single_qr/<qr_id>')
 @login_required
 def download_single_qr(qr_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT part_code FROM qr_codes WHERE qr_id = %s', (qr_id,))
+    cursor.execute('SELECT part_code FROM qr_codes WHERE qr_id = ?', (qr_id,))
     result = cursor.fetchone()
     
     if not result:
-        close_db(conn)
+        conn.close()
         return jsonify({'error': 'QR kod bulunamadı'}), 404
     
-    cursor.execute('UPDATE qr_codes SET is_downloaded = 1, downloaded_at = %s WHERE qr_id = %s',
+    cursor.execute('UPDATE qr_codes SET is_downloaded = 1, downloaded_at = ? WHERE qr_id = ?',
                  (datetime.now(), qr_id))
     conn.commit()
-    close_db(conn)
+    conn.close()
     
-    try:
-        # B2'den QR kod'u indir
-        b2_service = get_b2_service()
-        file_path = f'qr_codes/{qr_id}.png'
-        
-        file_content = b2_service.download_file(file_path)
-        
-        if file_content:
-            # B2'den var olan dosyayı döndür
-            buf = BytesIO(file_content)
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
-        else:
-            # QR kod yoksa oluştur ve B2'ye yükle
-            qr = qrcode.QRCode(version=1, box_size=10, border=4)
-            qr.add_data(qr_id)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            buf = BytesIO()
-            img.save(buf, format='PNG')
-            buf.seek(0)
-            
-            # B2'ye yükle
-            img_data = buf.getvalue()
-            upload_result = b2_service.upload_file(file_path, img_data, 'image/png')
-            
-            if upload_result['success']:
-                logging.info(f"QR code uploaded to B2: {file_path}")
-            
-            # Dosyayı döndür
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
-            
-    except Exception as e:
-        logging.error(f"Error downloading QR image for {qr_id}: {e}")
-        # Hata durumunda geleneksel yöntemle oluştur
-        qr = qrcode.QRCode(version=1, box_size=10, border=4)
-        qr.add_data(qr_id)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        
-        buf = BytesIO()
-        img.save(buf, format='PNG')
-        buf.seek(0)
-        
-        return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(qr_id)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    
+    return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
 
-# Admin şifre konstansı (Environment'dan al)
-ADMIN_PASSWORD = os.environ.get('ADMIN_COUNT_PASSWORD', "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J")
+# Admin şifre konstansı
+ADMIN_PASSWORD = "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J"
 
 @app.route('/admin')
 def admin_login():
@@ -887,21 +488,8 @@ def get_users():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at DESC')
-    rows = cursor.fetchall()
-    
-    # PostgreSQL row'larını dictionary'ye çevir
-    users = []
-    for row in rows:
-        user_dict = {
-            'id': row[0],
-            'username': row[1], 
-            'full_name': row[2],
-            'role': row[3],
-            'created_at': row[4]
-        }
-        users.append(user_dict)
-    
-    close_db(conn)
+    users = [dict(row) for row in cursor.fetchall()]
+    conn.close()
     return render_template('admin_users.html', users=users)
 
 @app.route('/admin/users', methods=['POST'])
@@ -922,7 +510,7 @@ def create_user():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute('INSERT INTO users (username, password, password_hash, full_name, role) VALUES (%s, %s, %s, %s, %s)',
+        cursor.execute('INSERT INTO users (username, password, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)',
                      (username, password, password_hash, full_name, role))
         conn.commit()
         return jsonify({'success': True, 'message': 'Kullanıcı oluşturuldu'})
@@ -951,10 +539,10 @@ def update_user(user_id):
     try:
         if password:  # Şifre değiştiriliyorsa
             password_hash = hashlib.sha256(password.encode()).hexdigest()
-            cursor.execute('UPDATE users SET username = %s, password = %s, full_name = %s, role = %s WHERE id = %s',
+            cursor.execute('UPDATE users SET username = ?, password = ?, full_name = ?, role = ? WHERE id = ?',
                          (username, password_hash, full_name, role, user_id))
         else:  # Şifre değiştirilmiyorsa
-            cursor.execute('UPDATE users SET username = %s, full_name = %s, role = %s WHERE id = %s',
+            cursor.execute('UPDATE users SET username = ?, full_name = ?, role = ? WHERE id = ?',
                          (username, full_name, role, user_id))
         
         conn.commit()
@@ -973,9 +561,9 @@ def delete_user(user_id):
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+    cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
     conn.commit()
-    close_db(conn)
+    conn.close()
     return jsonify({'success': True, 'message': 'Kullanıcı silindi'})
 
 @app.route('/admin/reset_active_sessions', methods=['POST'])
@@ -985,18 +573,18 @@ def reset_active_sessions():
     cursor = conn.cursor()
     
     # Aktif oturumları kontrol et
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = \'active\'")
+    cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = "active"')
     active_count = cursor.fetchone()[0]
     
     if active_count == 0:
-        close_db(conn)
+        conn.close()
         return jsonify({'success': True, 'message': 'Aktif sayım oturumu bulunamadı'})
     
     # Aktif oturumları kapat
-    cursor.execute("UPDATE count_sessions SET status = 'completed', finished_at = %s WHERE status = 'active'",
+    cursor.execute('UPDATE count_sessions SET status = "completed", finished_at = ? WHERE status = "active"',
                  (datetime.now(),))
     conn.commit()
-    close_db(conn)
+    conn.close()
     
     # WebSocket ile tüm istemcilere bildir
     socketio.emit('sessions_reset', {'message': 'Aktif sayım oturumları yönetici tarafından kapatıldı'})
@@ -1010,58 +598,24 @@ def download_all_qr():
     cursor = conn.cursor()
     cursor.execute('SELECT qr_id, part_code, part_name FROM qr_codes WHERE is_used = 0 ORDER BY part_code, qr_id')
     qr_codes = cursor.fetchall()
-    close_db(conn)
+    conn.close()
     
     memory_file = BytesIO()
-    b2_service = get_b2_service()
-    
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for row in qr_codes:
             qr_id = row[0]
             part_code = row[1]
-            file_path = f'qr_codes/{qr_id}.png'
             
-            try:
-                # B2'den QR kod'u indir
-                file_content = b2_service.download_file(file_path)
-                
-                if file_content:
-                    # B2'den var olan dosyayı kullan
-                    zipf.writestr(f'{part_code}_{qr_id}.png', file_content)
-                else:
-                    # QR kod yoksa oluştur ve B2'ye yükle
-                    qr = qrcode.QRCode(version=1, box_size=10, border=4)
-                    qr.add_data(qr_id)
-                    qr.make(fit=True)
-                    img = qr.make_image(fill_color="black", back_color="white")
-                    
-                    img_buffer = BytesIO()
-                    img.save(img_buffer, format='PNG')
-                    img_buffer.seek(0)
-                    
-                    img_data = img_buffer.getvalue()
-                    
-                    # B2'ye yükle
-                    upload_result = b2_service.upload_file(file_path, img_data, 'image/png')
-                    if upload_result['success']:
-                        logging.info(f"QR code uploaded to B2: {file_path}")
-                    
-                    # ZIP'e ekle
-                    zipf.writestr(f'{part_code}_{qr_id}.png', img_data)
-                    
-            except Exception as e:
-                logging.error(f"Error processing QR code {qr_id}: {e}")
-                # Hata durumunda geleneksel yöntemle oluştur
-                qr = qrcode.QRCode(version=1, box_size=10, border=4)
-                qr.add_data(qr_id)
-                qr.make(fit=True)
-                img = qr.make_image(fill_color="black", back_color="white")
-                
-                img_buffer = BytesIO()
-                img.save(img_buffer, format='PNG')
-                img_buffer.seek(0)
-                
-                zipf.writestr(f'{part_code}_{qr_id}.png', img_buffer.getvalue())
+            qr = qrcode.QRCode(version=1, box_size=10, border=4)
+            qr.add_data(qr_id)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            img_buffer = BytesIO()
+            img.save(img_buffer, format='PNG')
+            img_buffer.seek(0)
+            
+            zipf.writestr(f'{part_code}_{qr_id}.png', img_buffer.getvalue())
     
     memory_file.seek(0)
     return send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name='qr_codes.zip')
@@ -1084,34 +638,34 @@ def start_count_internal():
         conn = get_db()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT COUNT(*) as count FROM count_sessions WHERE status = \'active\'")
+        cursor.execute('SELECT COUNT(*) as count FROM count_sessions WHERE status = "active"')
         active_session = cursor.fetchone()
         if active_session[0] > 0:
-            close_db(conn)
+            conn.close()
             return jsonify({'error': 'Aktif bir sayım oturumu var. Önce mevcut sayımı bitirin.'}), 400
         
         session_id = uuid.uuid4().hex
-        cursor.execute('INSERT INTO count_sessions (session_id, status) VALUES (%s, %s)', (session_id, 'active'))
+        cursor.execute('INSERT INTO count_sessions (session_id, status) VALUES (?, ?)', (session_id, 'active'))
         
         for _, row in df.iterrows():
             part_code = str(row['part_code'])
             quantity = int(row['quantity'])
             
-            cursor.execute('SELECT part_name FROM parts WHERE part_code = %s LIMIT 1', (part_code,))
+            cursor.execute('SELECT part_name FROM parts WHERE part_code = ? LIMIT 1', (part_code,))
             part_result = cursor.fetchone()
             part_name = part_result[0] if part_result else 'Bilinmeyen Parça'
             
-            cursor.execute('INSERT INTO inventory_data (session_id, part_code, expected_quantity) VALUES (%s, %s, %s)',
+            cursor.execute('INSERT INTO inventory_data (session_id, part_code, expected_quantity) VALUES (?, ?, ?)',
                          (session_id, part_code, quantity))
         
         # Güçlü parola oluştur ve kaydet
         count_password = generate_strong_password()
         print(f"DEBUG: Oluşturulan şifre: {count_password}")  # Debug
-        cursor.execute('INSERT INTO count_passwords (session_id, password, created_by) VALUES (%s, %s, %s)',
+        cursor.execute('INSERT INTO count_passwords (session_id, password, created_by) VALUES (?, ?, ?)',
                      (session_id, count_password, session['user_id']))
         
         conn.commit()
-        close_db(conn)
+        conn.close()
         
         session['current_session'] = session_id
         
@@ -1147,20 +701,20 @@ def verify_count_password():
     cursor = conn.cursor()
     
     # Aktif sayım oturumunu bul
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute('SELECT session_id FROM count_sessions WHERE status = "active" LIMIT 1')
     session_result = cursor.fetchone()
     
     if not session_result:
-        close_db(conn)
+        conn.close()
         return jsonify({'error': 'Aktif sayım oturumu bulunamadı'}), 404
     
     session_id = session_result[0]
     
     # Parolayı kontrol et
-    cursor.execute('SELECT password FROM count_passwords WHERE session_id = %s', (session_id,))
+    cursor.execute('SELECT password FROM count_passwords WHERE session_id = ?', (session_id,))
     password_result = cursor.fetchone()
     
-    close_db(conn)
+    conn.close()
     
     if not password_result:
         return jsonify({'error': 'Bu sayım için parola bulunamadı'}), 404
@@ -1177,9 +731,9 @@ def verify_count_password():
 def get_count_status():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT session_id, status, started_at FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute('SELECT session_id, status, started_at FROM count_sessions WHERE status = "active" LIMIT 1')
     count_session = cursor.fetchone()
-    close_db(conn)
+    conn.close()
     
     if count_session:
         return jsonify({
@@ -1204,24 +758,24 @@ def get_session_stats():
     cursor = conn.cursor()
     
     # Aktif sayım oturumunu bul
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute('SELECT session_id FROM count_sessions WHERE status = "active" LIMIT 1')
     session_result = cursor.fetchone()
     
     if not session_result:
-        close_db(conn)
+        conn.close()
         return jsonify({'success': False, 'error': 'Aktif sayım oturumu bulunamadı'})
     
     session_id = session_result[0]
     
     # Beklenen toplam sayıyı hesapla
-    cursor.execute('SELECT SUM(expected_quantity) FROM inventory_data WHERE session_id = %s', (session_id,))
+    cursor.execute('SELECT SUM(expected_quantity) FROM inventory_data WHERE session_id = ?', (session_id,))
     expected_total = cursor.fetchone()[0] or 0
     
     # Okutulan sayıyı hesapla
-    cursor.execute('SELECT COUNT(*) FROM scanned_qr WHERE session_id = %s', (session_id,))
+    cursor.execute('SELECT COUNT(*) FROM scanned_qr WHERE session_id = ?', (session_id,))
     scanned_total = cursor.fetchone()[0] or 0
     
-    close_db(conn)
+    conn.close()
     
     return jsonify({
         'success': True,
@@ -1238,11 +792,11 @@ def get_recent_activities():
     cursor = conn.cursor()
     
     # Aktif sayım oturumunu bul
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute('SELECT session_id FROM count_sessions WHERE status = "active" LIMIT 1')
     session_result = cursor.fetchone()
     
     if not session_result:
-        close_db(conn)
+        conn.close()
         return jsonify({'success': False, 'error': 'Aktif sayım oturumu bulunamadı'})
     
     session_id = session_result[0]
@@ -1258,7 +812,7 @@ def get_recent_activities():
         FROM scanned_qr sq
         LEFT JOIN users u ON sq.scanned_by = u.id
         LEFT JOIN inventory_data id ON sq.qr_code = id.qr_code AND sq.session_id = id.session_id
-        WHERE sq.session_id = %s
+        WHERE sq.session_id = ?
         ORDER BY sq.scanned_at DESC
         LIMIT 20
     ''', (session_id,))
@@ -1273,7 +827,7 @@ def get_recent_activities():
             'part_name': row[4]
         })
     
-    close_db(conn)
+    conn.close()
     return jsonify({'success': True, 'activities': activities})
 
 @socketio.on('scan_qr')
@@ -1288,46 +842,46 @@ def handle_scan(data):
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute('SELECT session_id FROM count_sessions WHERE status = "active" LIMIT 1')
     session_result = cursor.fetchone()
     
     if not session_result:
         emit('scan_result', {'success': False, 'message': 'Aktif sayım oturumu bulunamadı'})
-        close_db(conn)
+        conn.close()
         return
     
     session_id = session_result[0]
     
-    cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes WHERE qr_id = %s', (qr_id,))
+    cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes WHERE qr_id = ?', (qr_id,))
     qr_result = cursor.fetchone()
     
     if not qr_result:
         emit('scan_result', {'success': False, 'message': 'QR kod bulunamadı'})
-        close_db(conn)
+        conn.close()
         return
     
     if qr_result[3] == 1:
         emit('scan_result', {'success': False, 'message': 'Bu QR kod daha önce kullanıldı'})
-        close_db(conn)
+        conn.close()
         return
     
     part_code = qr_result[1]
     part_name = qr_result[2]
     
-    cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = %s WHERE qr_id = %s',
+    cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = ? WHERE qr_id = ?',
                  (datetime.now(), qr_id))
     
-    cursor.execute('INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by) VALUES (%s, %s, %s, %s)',
+    cursor.execute('INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by) VALUES (?, ?, ?, ?)',
                  (session_id, qr_id, part_code, session['user_id']))
     
     conn.commit()
     
     # Kullanıcı bilgisini al
-    cursor.execute('SELECT full_name FROM users WHERE id = %s', (session['user_id'],))
+    cursor.execute('SELECT full_name FROM users WHERE id = ?', (session['user_id'],))
     user_result = cursor.fetchone()
     user_name = user_result[0] if user_result else 'Bilinmeyen Kullanıcı'
     
-    close_db(conn)
+    conn.close()
     
     emit('scan_result', {
         'success': True,
@@ -1348,23 +902,23 @@ def finish_count():
     cursor = conn.cursor()
     
     # Aktif sayım oturumu kontrolü
-    cursor.execute("SELECT session_id, status FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute('SELECT session_id, status FROM count_sessions WHERE status = "active" LIMIT 1')
     session_result = cursor.fetchone()
     
     if not session_result:
-        close_db(conn)
+        conn.close()
         return jsonify({'error': 'Aktif sayım oturumu bulunamadı'}), 400
     
     session_id = session_result[0]
     
     # Çift işlem kontrolü - eğer bu oturum zaten tamamlandıysa
-    cursor.execute('SELECT status FROM count_sessions WHERE session_id = %s', (session_id,))
+    cursor.execute('SELECT status FROM count_sessions WHERE session_id = ?', (session_id,))
     current_status = cursor.fetchone()
     if current_status and current_status[0] != 'active':
-        close_db(conn)
+        conn.close()
         return jsonify({'error': 'Bu sayım oturumu zaten tamamlanmış'}), 400
     
-    cursor.execute("UPDATE count_sessions SET status = 'completed', finished_at = %s WHERE session_id = %s",
+    cursor.execute('UPDATE count_sessions SET status = "completed", finished_at = ? WHERE session_id = ?',
                  (datetime.now(), session_id))
     
     cursor.execute('''
@@ -1376,7 +930,7 @@ def finish_count():
         FROM inventory_data i
         LEFT JOIN parts p ON i.part_code = p.part_code
         LEFT JOIN scanned_qr s ON i.part_code = s.part_code AND i.session_id = s.session_id
-        WHERE i.session_id = %s
+        WHERE i.session_id = ?
         GROUP BY i.part_code, p.part_name, i.expected_quantity
     ''', (session_id,))
     
@@ -1421,12 +975,12 @@ def finish_count():
     cursor.execute('''
         INSERT INTO count_reports (session_id, file_path, report_name, 
                                  total_expected, total_scanned, accuracy_rate)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?)
     ''', (session_id, report_filename, report_title, 
           total_expected, total_scanned, accuracy_rate))
     
     conn.commit()
-    close_db(conn)
+    conn.close()
     
     # WebSocket ile sayım bittiği bilgisini gönder
     socketio.emit('count_finished', {'session_id': session_id})
@@ -1455,18 +1009,18 @@ def stop_all_counts():
     
     try:
         # Tüm aktif sayımları bul
-        cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\'")
+        cursor.execute('SELECT session_id FROM count_sessions WHERE status = "active"')
         active_sessions = cursor.fetchall()
         
         if not active_sessions:
-            close_db(conn)
+            conn.close()
             return jsonify({'success': True, 'message': 'Durdurulacak aktif sayım bulunamadı'})
         
         # Tüm aktif sayımları "stopped" olarak işaretle
         stopped_count = 0
         for session_tuple in active_sessions:
             session_id = session_tuple[0]
-            cursor.execute('UPDATE count_sessions SET status = "stopped", finished_at = %s WHERE session_id = %s',
+            cursor.execute('UPDATE count_sessions SET status = "stopped", finished_at = ? WHERE session_id = ?',
                          (datetime.now(), session_id))
             stopped_count += 1
         
@@ -1476,7 +1030,7 @@ def stop_all_counts():
         session.pop('current_session', None)
         
         conn.commit()
-        close_db(conn)
+        conn.close()
         
         # WebSocket ile tüm kullanıcılara sayımların durdurulduğunu bildir
         socketio.emit('all_counts_stopped', {
@@ -1492,7 +1046,7 @@ def stop_all_counts():
         
     except Exception as e:
         conn.rollback()
-        close_db(conn)
+        conn.close()
         return jsonify({'success': False, 'error': f'Sistem hatası: {str(e)}'}), 500
 
 @app.route('/reports')
@@ -1514,7 +1068,7 @@ def check_existing_qrs():
     cursor = conn.cursor()
     cursor.execute('SELECT COUNT(*) FROM qr_codes')
     count = cursor.fetchone()[0]
-    close_db(conn)
+    conn.close()
     
     return jsonify({
         'hasQRs': count > 0,
@@ -1528,42 +1082,27 @@ def clear_all_qrs():
     cursor = conn.cursor()
     
     # Aktif sayım oturumu kontrolü
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = \'active\'")
+    cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = "active"')
     active_session = cursor.fetchone()[0]
     
     if active_session > 0:
-        close_db(conn)
+        conn.close()
         return jsonify({'error': 'Aktif bir sayım oturumu var. QR kodları silinemez.'}), 400
     
     try:
-        # Mevcut QR kodları için B2'den dosyaları sil
-        try:
-            b2_service = get_b2_service()
-            cursor.execute('SELECT qr_id FROM qr_codes')
-            existing_qr_codes = cursor.fetchall()
-            
-            for row in existing_qr_codes:
-                qr_id = row[0]
-                file_path = f'qr_codes/{qr_id}.png'
-                b2_service.delete_file(file_path)
-                logging.info(f"Deleted QR code from B2: {file_path}")
-                
-        except Exception as e:
-            logging.error(f"Error deleting QR codes from B2: {e}")
-        
         # QR kodlarını ve parçaları sil
         cursor.execute('DELETE FROM qr_codes')
         cursor.execute('DELETE FROM parts')
         
         conn.commit()
-        close_db(conn)
+        conn.close()
         
         return jsonify({
             'success': True,
             'message': 'Tüm QR kodları başarıyla silindi'
         })
     except Exception as e:
-        close_db(conn)
+        conn.close()
         return jsonify({'error': f'QR kodları silinirken hata: {str(e)}'}), 500
 
 @app.route('/get_reports')
@@ -1595,7 +1134,7 @@ def get_reports():
             'created_by': row[8] or 'Bilinmeyen'
         })
     
-    close_db(conn)
+    conn.close()
     return jsonify(reports)
 
 @app.route('/download_report/<filename>')
@@ -1681,7 +1220,7 @@ def api_get_qr_codes():
             'created_at': row[5]
         })
     
-    close_db(conn)
+    conn.close()
     return jsonify(qr_codes)
 
 @app.route('/api/reports')
@@ -1711,7 +1250,7 @@ def api_get_reports():
             'accuracy_rate': row[7]
         })
     
-    close_db(conn)
+    conn.close()
     return jsonify(reports)
 
 @app.route('/api/dashboard_stats')
@@ -1730,23 +1269,23 @@ def api_dashboard_stats():
     total_reports = cursor.fetchone()[0]
     
     # Aktif sayımlar
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = 'active'")
+    cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = "active"')
     active_counts = cursor.fetchone()[0]
     
     # Tamamlanan sayımlar
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = 'completed'")
+    cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = "completed"')
     completed_counts = cursor.fetchone()[0]
     
     # Son sayım bilgisi
     cursor.execute('''
         SELECT started_at FROM count_sessions 
-        WHERE status = 'completed' 
+        WHERE status = "completed" 
         ORDER BY started_at DESC LIMIT 1
     ''')
     last_count = cursor.fetchone()
     last_count_date = last_count[0] if last_count else None
     
-    close_db(conn)
+    conn.close()
     
     stats = {
         'total_qr_codes': total_qr_codes,
@@ -1758,115 +1297,11 @@ def api_dashboard_stats():
     print(f"DEBUG: Gönderilen stats: {stats}")  # DEBUG
     return jsonify(stats)
 
-# Health Check ve Monitoring Endpoints
-@app.route('/health')
-def health_check():
-    """Sistem sağlık kontrolü"""
-    try:
-        # Database bağlantı kontrolü
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('SELECT 1')
-        cursor.fetchone()
-        close_db(conn)
-        db_status = "✅ OK"
-        
-        # B2 bağlantı kontrolü
-        try:
-            from b2_storage import get_b2_service
-            b2_service = get_b2_service()
-            b2_status = "✅ OK"
-        except Exception:
-            b2_status = "⚠️ ERROR"
-        
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': datetime.now().isoformat(),
-            'database': db_status,
-            'storage': b2_status,
-            'version': '2.0.0'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-@app.route('/metrics')
-def metrics():
-    """Sistem metrikleri"""
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        # İstatistikler
-        cursor.execute('SELECT COUNT(*) FROM qr_codes')
-        total_qr = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM qr_codes WHERE is_used = 1')
-        used_qr = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM users')
-        total_users = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = 'active'")
-        active_sessions = cursor.fetchone()[0]
-        
-        close_db(conn)
-        
-        return jsonify({
-            'qr_codes': {
-                'total': total_qr,
-                'used': used_qr,
-                'remaining': total_qr - used_qr
-            },
-            'users': total_users,
-            'active_sessions': active_sessions,
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Render.com deployment check
-def is_render_deployment():
-    """Render.com deploy kontrolü"""
-    return os.environ.get('RENDER') is not None
-
-def get_port():
-    """Port numarasını al"""
-    return int(os.environ.get('PORT', 5001))
-
 if __name__ == '__main__':
     # Initialize database on startup
     try:
         init_db()
     except Exception as e:
         print(f"❌ Failed to initialize database: {e}")
-    
-    port = get_port()
-    is_production = is_render_deployment()
-    
-    if is_production:
-        print("🌐 Starting EnvanterQR on Render.com...")
-        print(f"� Production Mode - Port: {port}")
-        print("☁️ Storage: Backblaze B2 Enabled")
-        print("🔒 Security: Production Headers Active")
-        
-        # Production mode - Gunicorn ile çalışır
-        # Bu kod sadece debug için, gerçek production'da gunicorn kullanılır
-        socketio.run(app, host='0.0.0.0', port=port, debug=False)
-    else:
-        print("�🚀 Starting EnvanterQR System v2.0...")
-        print("📊 Dashboard: http://localhost:5001")
-        print("🔐 Admin Panel: http://localhost:5001/admin")
-        print("🏥 Health Check: http://localhost:5001/health")
-        print("📈 Metrics: http://localhost:5001/metrics")
-        print("☁️ Storage: Backblaze B2 Enabled")
-        print("🔒 Security: Headers + Rate Limiting Active")
-        print()
-        
-        # Development mode
-        socketio.run(app, host='localhost', port=5001, debug=True)
     
     socketio.run(app, host='0.0.0.0', port=5001, debug=True, allow_unsafe_werkzeug=True)

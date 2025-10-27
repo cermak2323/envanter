@@ -71,6 +71,48 @@
         .alert {
             border-radius: 10px;
         }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .login-card {
+                margin: 1rem;
+                padding: 2rem;
+                max-width: 100%;
+            }
+            
+            .login-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .login-header i {
+                font-size: 2.5rem !important;
+            }
+            
+            .form-control {
+                padding: 0.9rem 1rem;
+                font-size: 1rem;
+            }
+            
+            .btn-login {
+                padding: 0.9rem;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                margin: 0.5rem;
+                padding: 1.5rem;
+            }
+            
+            .login-header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .login-header p {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -78,7 +120,7 @@
         <div class="login-card">
             <div class="login-header">
                 <i class="bi bi-qr-code-scan" style="font-size: 3rem;"></i>
-                <h1>Cermak Envanter</h1>
+                <h1>Cermak Envanter Yönetimi</h1>
                 <p>QR Kod Tabanlı Sayım Sistemi</p>
             </div>
             <div class="login-body">

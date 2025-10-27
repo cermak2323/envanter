@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: envanterqr-app
+    runtime: python3
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: chmod +x start.sh && ./start.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.6
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: SESSION_SECRET
+        value: 8K2mN9pL6xQ4vR7sT1uW3eY5zA8bC0dF9gH2jK4mN6pQ8sT0uW2eY4zA6bC8dF1g
+      - key: B2_APPLICATION_KEY_ID
+        value: 00313590dd2fde60000000004
+      - key: B2_APPLICATION_KEY
+        value: K003NeFyCuFJzM/1Qo1xYXu+f/M87WU
+      - key: B2_BUCKET_NAME
+        value: envanter-qr-bucket
+      - key: ADMIN_COUNT_PASSWORD
+        value: "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J"
+    autoDeploy: false
+
+# PostgreSQL database section kaldırıldı - mevcut Neon database kullanılacak

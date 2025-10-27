@@ -69,8 +69,11 @@ def main():
     # Start application
     port = os.environ.get('PORT', '10000')
     
-    # Try gunicorn first
+    # Check if gunicorn is available
     try:
+        import gunicorn
+        print("✅ Gunicorn available")
+        
         cmd = [
             python_exe, '-m', 'gunicorn',
             '--worker-class', 'eventlet',
@@ -83,15 +86,38 @@ def main():
         print(f"🚀 Starting gunicorn: {' '.join(cmd)}")
         os.execvp(python_exe, cmd)
         
+    except ImportError:
+        print("⚠️ Gunicorn not available, starting Flask directly")
+        
+        # Direct Flask startup
+        try:
+            print("🔄 Starting Flask development server")
+            os.environ['FLASK_ENV'] = 'production'
+            
+            # Import and run Flask app
+            sys.path.insert(0, os.getcwd())
+            from app import app
+            
+            print(f"🚀 Flask starting on 0.0.0.0:{port}")
+            app.run(host='0.0.0.0', port=int(port), debug=False, threaded=True)
+            
+        except Exception as e2:
+            print(f"❌ Flask direct start failed: {e2}")
+            sys.exit(1)
+            
     except Exception as e:
         print(f"❌ Gunicorn failed: {e}")
         
         # Fallback to direct Flask
         try:
             print("🔄 Fallback: Starting Flask directly")
-            cmd = [python_exe, 'app.py']
-            print(f"🚀 Starting Flask: {' '.join(cmd)}")
-            os.execvp(python_exe, cmd)
+            os.environ['FLASK_ENV'] = 'production'
+            
+            sys.path.insert(0, os.getcwd())
+            from app import app
+            
+            print(f"🚀 Flask fallback starting on 0.0.0.0:{port}")
+            app.run(host='0.0.0.0', port=int(port), debug=False, threaded=True)
             
         except Exception as e2:
             print(f"❌ Flask direct start failed: {e2}")

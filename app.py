@@ -162,7 +162,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data:;"
     return response
 
 @app.after_request
@@ -235,7 +235,7 @@ def generate_strong_password():
     return ''.join(password)
 
 # Admin sayım şifresi
-ADMIN_COUNT_PASSWORD = os.environ.get('ADMIN_COUNT_PASSWORD', "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J")
+ADMIN_COUNT_PASSWORD = os.environ.get('ADMIN_COUNT_PASSWORD', generate_strong_password())
 
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
@@ -324,10 +324,13 @@ def init_db():
         cursor.execute('SELECT COUNT(*) FROM users WHERE username = %s', ('admin',))
         if cursor.fetchone()[0] == 0:
             import hashlib
-            admin_password = hashlib.sha256('admin123'.encode()).hexdigest()
+            # Generate strong default password
+            default_admin_pass = generate_strong_password()
+            admin_password_hash = hashlib.sha256(default_admin_pass.encode()).hexdigest()
             cursor.execute('INSERT INTO users (username, password, password_hash, full_name, role) VALUES (%s, %s, %s, %s, %s)',
-                         ('admin', 'admin123', admin_password, 'Administrator', 'admin'))
-            print("✅ Default admin user created")
+                         ('admin', default_admin_pass, admin_password_hash, 'Administrator', 'admin'))
+            print(f"✅ Default admin user created with secure password")
+            print(f"⚠️  Please save this password securely: {default_admin_pass}")
         
         conn.commit()
         return True
@@ -977,6 +980,44 @@ def delete_user(user_id):
     conn.commit()
     close_db(conn)
     return jsonify({'success': True, 'message': 'Kullanıcı silindi'})
+
+@app.route('/admin/users/<int:user_id>/change_password', methods=['POST'])
+@admin_required
+def change_user_password(user_id):
+    """Admin tarafından kullanıcı şifresi değiştirme"""
+    import hashlib
+    
+    data = request.get_json()
+    new_password = data.get('password', '').strip()
+    
+    if not new_password or len(new_password) < 6:
+        return jsonify({'error': 'Şifre en az 6 karakter olmalıdır'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # User'ın kendi hesabı mı kontrol et
+        cursor.execute('SELECT id FROM users WHERE id = %s', (user_id,))
+        if not cursor.fetchone():
+            return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
+        
+        # Şifre hash'le ve güncelle
+        password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+        cursor.execute('UPDATE users SET password = %s WHERE id = %s',
+                     (new_password, user_id))
+        # Eski hash'ı de güncelle compat için
+        cursor.execute('UPDATE users SET password_hash = %s WHERE id = %s',
+                     (password_hash, user_id))
+        
+        conn.commit()
+        return jsonify({'success': True, 'message': f'Şifre başarıyla değiştirildi'})
+    
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': f'Hata: {str(e)}'}), 500
+    finally:
+        close_db(conn)
 
 @app.route('/admin/reset_active_sessions', methods=['POST'])
 @admin_required

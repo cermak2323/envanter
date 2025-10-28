@@ -54,3 +54,4 @@ instance/
 # Environment
 .env
 .env.local
+ENV_VARIABLES_SUMMARY.md

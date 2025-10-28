@@ -250,20 +250,54 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 def get_db():
     """Get database connection from pool"""
     try:
+        # Try to get a connection from the pool
         conn = db_pool.getconn()
-        # PostgreSQL connection pool handles transactions automatically
+
+        # Validate that the connection is open. psycopg2 connection has
+        # a .closed attribute (0 means open). If it's closed, discard and get a new one.
+        try:
+            if getattr(conn, 'closed', 1):
+                # Return the closed connection (ask pool to close it) and get another
+                try:
+                    db_pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+                conn = db_pool.getconn()
+
+        except Exception:
+            # If any validation check fails, attempt to use the connection anyway
+            pass
+
         return conn
     except Exception as e:
-        print(f"❌ Database connection error: {e}")
-        raise
+        # Try to reinitialize pool once in case connections were dropped server-side
+        try:
+            logging.warning(f"Database pool error, attempting to reinitialize pool: {e}")
+            init_db_pool()
+            conn = db_pool.getconn()
+            return conn
+        except Exception as e2:
+            logging.error(f"Failed to get DB connection after reinit: {e2}")
+            raise
 
 def close_db(conn):
     """Return connection to pool"""
     try:
         if conn:
-            db_pool.putconn(conn)
+            # If connection is already closed at the libpq level, tell the pool to close it
+            try:
+                if getattr(conn, 'closed', 1):
+                    db_pool.putconn(conn, close=True)
+                else:
+                    db_pool.putconn(conn)
+            except TypeError:
+                # Older psycopg2 versions may not accept close kwarg; fallback
+                try:
+                    db_pool.putconn(conn)
+                except Exception:
+                    pass
     except Exception as e:
-        print(f"❌ Error returning connection to pool: {e}")
+        logging.error(f"❌ Error returning connection to pool: {e}")
 
 def create_performance_indexes(cursor):
     """Performans için kritik indexleri oluştur"""
@@ -511,8 +545,31 @@ def login():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT id, username, full_name, role FROM users WHERE username = %s AND password_hash = %s',
-                 (username, password_hash))
+    try:
+        cursor.execute('SELECT id, username, full_name, role FROM users WHERE username = %s AND password_hash = %s',
+                     (username, password_hash))
+    except psycopg2.OperationalError as oe:
+        # Connection was closed unexpectedly (e.g., server-side idle timeout / SSL termination).
+        logging.warning(f"OperationalError on login query, attempting one retry: {oe}")
+        try:
+            close_db(conn)
+        except Exception:
+            pass
+        # Attempt to reinitialize pool and retry once
+        try:
+            init_db_pool()
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, username, full_name, role FROM users WHERE username = %s AND password_hash = %s',
+                         (username, password_hash))
+        except Exception as e2:
+            logging.exception(f"Failed to execute login query after retry: {e2}")
+            try:
+                close_db(conn)
+            except Exception:
+                pass
+            return jsonify({'error': 'Database connection error'}), 500
+
     user = cursor.fetchone()
     close_db(conn)
     

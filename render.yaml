@@ -3,8 +3,8 @@ services:
     name: envanterqr-app
     runtime: python3
     plan: starter
-    buildCommand: bash build.sh
-    startCommand: python3 render_startup.py
+    buildCommand: bash build_alt.sh
+    startCommand: python3 render_startup_alt.py
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION

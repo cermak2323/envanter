@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Render.com Startup - Simple & Reliable
+Render.com Startup - Simple & Reliable with Dependency Check
 """
 import os
 import sys
+import subprocess
 
 print("🚀 EnvanterQR RENDER.COM STARTUP")
 print(f"🐍 Python: {sys.version}")
@@ -31,6 +32,30 @@ if missing_vars:
     sys.exit(1)
 
 print("✅ Environment variables check passed")
+
+# Check if Flask is available, if not install requirements
+try:
+    import flask
+    print(f"✅ Flask {flask.__version__} available")
+except ImportError:
+    print("❌ Flask not found, installing requirements...")
+    try:
+        result = subprocess.run([
+            sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'
+        ], check=True, capture_output=True, text=True, timeout=300)
+        print("✅ Requirements installed successfully")
+        
+        # Test import again
+        import flask
+        print(f"✅ Flask {flask.__version__} now available")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install requirements: {e}")
+        print(f"STDOUT: {e.stdout}")
+        print(f"STDERR: {e.stderr}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Unexpected error during installation: {e}")
+        sys.exit(1)
 
 try:
     print("🔄 Importing application...")

@@ -155,3 +155,11 @@
 2025-10-28 12:38:36,928 - werkzeug - INFO -  * Restarting with stat
 2025-10-28 12:38:39,879 - werkzeug - WARNING -  * Debugger is active!
 2025-10-28 12:38:39,883 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 13:13:33,719 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\render_startup.py', reloading
+2025-10-28 13:13:33,980 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 13:13:37,547 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 13:13:37,567 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 13:20:33,243 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\render_startup.py', reloading
+2025-10-28 13:20:33,423 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 13:20:36,645 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 13:20:36,650 - werkzeug - INFO -  * Debugger PIN: 527-412-432

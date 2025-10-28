@@ -1,1 +1,1 @@
-web: python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 app:app
+web: python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --timeout 30 --access-logfile - --error-logfile - render_startup_alt:app

@@ -5,6 +5,9 @@ Gunicorn WSGI app for Render.com
 import os
 import sys
 
+# Add current dir to path
+sys.path.insert(0, os.getcwd())
+
 # Setup environment
 os.environ['RENDER'] = 'true'
 os.environ['FLASK_ENV'] = 'production'
@@ -13,8 +16,17 @@ os.environ['FLASK_ENV'] = 'production'
 os.makedirs('uploads', exist_ok=True)
 os.makedirs('reports', exist_ok=True)
 
+print(f"Python: {sys.version}")
+print(f"CWD: {os.getcwd()}")
+print(f"sys.path: {sys.path[:3]}")
+
 # Import and configure app
-from app import app, socketio
+try:
+    from app import app, socketio
+    print("✅ App imported successfully")
+except ImportError as e:
+    print(f"❌ Import error: {e}")
+    raise
 
 # For Gunicorn
 if __name__ != "__main__":

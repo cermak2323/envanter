@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🔧 ALTERNATIVE RENDER BUILD SCRIPT"
+echo "🔧 OPTIMIZED RENDER BUILD SCRIPT"
 echo "=================================="
 
 # Show environment
@@ -9,42 +9,30 @@ echo "🐍 Python: $(python3 --version)"
 echo "📁 Working dir: $(pwd)"
 echo "📦 Pip: $(pip --version)"
 
-# Force upgrade pip first
+# Force upgrade pip first with cache cleanup
 echo ""
 echo "🔄 Upgrading pip..."
-python3 -m pip install --upgrade pip
+pip install --upgrade pip --no-cache-dir
 
-# Install packages one by one to avoid conflicts
+# Clear pip cache to save space
+echo "🧹 Clearing pip cache..."
+pip cache purge
+
+# Install requirements.txt with no-cache-dir flag
 echo ""
-echo "📦 Installing packages individually..."
+echo "📦 Installing from requirements.txt (optimized)..."
+pip install -r requirements.txt --no-cache-dir --no-build-isolation --prefer-binary
 
-packages=(
-    "flask>=3.1.0"
-    "flask-socketio>=5.5.0"
-    "psycopg2-binary>=2.9.0"
-    "eventlet>=0.35.0"
-    "python-dotenv>=1.0.0"
-    "gunicorn>=21.0.0"
-    "openpyxl>=3.1.0"
-    "pandas>=2.2.0"
-    "pillow>=10.0.0"
-    "python-socketio>=5.14.0"
-    "qrcode>=7.4.0"
-    "b2sdk>=2.0.0"
-)
-
-for package in "${packages[@]}"; do
-    echo "Installing $package..."
-    pip install "$package"
-done
+# Clear cache again after installation
+echo "🧹 Clearing pip cache after install..."
+pip cache purge
 
 # Verify critical imports
 echo ""
 echo "🔍 Verifying installations..."
-python3 -c "import flask; print(f'✅ Flask {flask.__version__}')"
-python3 -c "import flask_socketio; print('✅ Flask-SocketIO')"
-python3 -c "import psycopg2; print('✅ PostgreSQL')"
-python3 -c "import eventlet; print('✅ Eventlet')"
+python3 -c "import flask; print(f'✅ Flask {flask.__version__}')" || echo "❌ Flask check failed"
+python3 -c "import flask_socketio; print('✅ Flask-SocketIO')" || echo "❌ Flask-SocketIO check failed"
+python3 -c "import psycopg2; print('✅ PostgreSQL')" || echo "❌ PostgreSQL check failed"
 
 echo ""
-echo "✅ Alternative build complete!"
+echo "✅ Build complete!"

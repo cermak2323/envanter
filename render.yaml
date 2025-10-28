@@ -4,7 +4,7 @@ services:
     runtime: python3
     plan: starter
     buildCommand: pip install -r requirements.txt --no-cache-dir --prefer-binary
-    startCommand: python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --timeout 30 render_startup_alt:app
+    startCommand: exec python3 render_startup_alt.py
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -25,4 +25,4 @@ services:
     autoDeploy: false
 
 # NOTE: All secret environment variables must be set in Render Dashboard
-# Do NOT commit actual credential values to this file
+# DO NOT commit actual credential values to this file

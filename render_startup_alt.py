@@ -1,38 +1,32 @@
 #!/usr/bin/env python3
 """
-Gunicorn WSGI app for Render.com
+Render.com Startup Script - Launches Gunicorn with render_wsgi
 """
 import os
 import sys
+import subprocess
 
-# Add current dir to path
-sys.path.insert(0, os.getcwd())
+# Environment
+os.environ.setdefault('RENDER', 'true')
+os.environ.setdefault('FLASK_ENV', 'production')
 
-# Setup environment
-os.environ['RENDER'] = 'true'
-os.environ['FLASK_ENV'] = 'production'
+port = os.environ.get('PORT', '10000')
 
-# Create directories
-os.makedirs('uploads', exist_ok=True)
-os.makedirs('reports', exist_ok=True)
+# Build Gunicorn command
+cmd = [
+    sys.executable, '-m', 'gunicorn',
+    '--worker-class', 'eventlet',
+    '-w', '1',
+    '--bind', f'0.0.0.0:{port}',
+    '--timeout', '30',
+    '--access-logfile', '-',
+    '--error-logfile', '-',
+    'render_wsgi:app'
+]
 
-print(f"Python: {sys.version}")
-print(f"CWD: {os.getcwd()}")
-print(f"sys.path: {sys.path[:3]}")
+print(f"🚀 Starting Gunicorn: {' '.join(cmd)}")
 
-# Import and configure app
-try:
-    from app import app, socketio
-    print("✅ App imported successfully")
-except ImportError as e:
-    print(f"❌ Import error: {e}")
-    raise
+# Execute Gunicorn (replaces this process)
+os.execvp(cmd[0], cmd)
 
-# For Gunicorn
-if __name__ != "__main__":
-    # This runs when Gunicorn imports the module
-    print("✅ Gunicorn WSGI app loaded")
-else:
-    # Direct execution
-    port = int(os.environ.get('PORT', 10000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+

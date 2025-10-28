@@ -5,6 +5,7 @@ services:
     plan: starter
     buildCommand: bash build.sh
     startCommand: python3 render_startup.py
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         scope: build

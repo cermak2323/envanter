@@ -22,12 +22,12 @@ git push origin main
 Render Web Service → **Environment** sekmesinde:
 
 ```
-DATABASE_URL = postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require
-SESSION_SECRET = 8K2mN9pL6xQ4vR7sT1uW3eY5zA8bC0dF9gH2jK4mN6pQ8sT0uW2eY4zA6bC8dF1g
-B2_APPLICATION_KEY_ID = 00313590dd2fde60000000004
-B2_APPLICATION_KEY = K003NeFyCuFJzM/1Qo1xYXu+f/M87WU
-B2_BUCKET_NAME = envanter-qr-bucket
-ADMIN_COUNT_PASSWORD = @R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J
+DATABASE_URL = postgresql://username:password@hostname:port/database?sslmode=require&channel_binding=require
+SESSION_SECRET = your-session-secret-key-here
+B2_APPLICATION_KEY_ID = your-b2-application-key-id
+B2_APPLICATION_KEY = your-b2-application-key
+B2_BUCKET_NAME = your-bucket-name
+ADMIN_COUNT_PASSWORD = your-admin-password-here
 PYTHON_VERSION = 3.11.6
 ```
 

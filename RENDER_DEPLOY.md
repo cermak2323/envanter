@@ -47,8 +47,8 @@ Web Service ayarlarında **Environment** sekmesine gidin ve aşağıdaki değiş
 
 #### Gerekli Değişkenler:
 ```
-DATABASE_URL = postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require
-SESSION_SECRET = 8K2mN9pL6xQ4vR7sT1uW3eY5zA8bC0dF9gH2jK4mN6pQ8sT0uW2eY4zA6bC8dF1g
+DATABASE_URL = postgresql://username:password@hostname:port/database?sslmode=require&channel_binding=require
+SESSION_SECRET = your-session-secret-key-here
 ```
 
 #### Mevcut Backblaze B2 Ayarları:

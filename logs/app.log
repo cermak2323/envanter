@@ -127,3 +127,31 @@
 2025-10-28 12:04:17,944 - werkzeug - INFO -  * Restarting with stat
 2025-10-28 12:04:21,221 - werkzeug - WARNING -  * Debugger is active!
 2025-10-28 12:04:21,225 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:14:10,673 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-28 12:14:10,896 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:14:13,897 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:14:13,897 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:15:36,007 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app_backup.py', reloading
+2025-10-28 12:15:36,244 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:15:39,020 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:15:39,022 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:27:00,237 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app_backup.py', reloading
+2025-10-28 12:27:00,539 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:27:05,067 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:27:05,074 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:31:47,123 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\render_startup.py', reloading
+2025-10-28 12:31:47,427 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:31:51,143 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:31:51,148 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:32:08,409 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-28 12:32:08,628 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:32:12,113 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:32:12,118 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:32:28,372 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\gunicorn.conf.py', reloading
+2025-10-28 12:32:28,542 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:32:30,962 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:32:30,983 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-28 12:38:36,649 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-28 12:38:36,928 - werkzeug - INFO -  * Restarting with stat
+2025-10-28 12:38:39,879 - werkzeug - WARNING -  * Debugger is active!
+2025-10-28 12:38:39,883 - werkzeug - INFO -  * Debugger PIN: 527-412-432

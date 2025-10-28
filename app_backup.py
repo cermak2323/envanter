@@ -115,7 +115,7 @@ def init_db():
         
         if not users_table_exists:
             print("⚠️  Database tables not found. Please run the database_schema.sql script first.")
-            print("   Command: psql 'postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require' -f database_schema.sql")
+            print("   Command: psql '$DATABASE_URL' -f database_schema.sql")
             return False
         else:
             print("✅ Database tables found")

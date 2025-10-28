@@ -61,7 +61,15 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 # Static dosya sıkıştırma için
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 yıl cache
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+# SocketIO - Render.com compatible configuration
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*",
+    async_mode='eventlet',
+    ping_timeout=60,
+    ping_interval=25,
+    max_http_buffer_size=1e6
+)
 
 # ======================
 # MOBIL PERFORMANS OPTIMIZASYONLARI
@@ -312,7 +320,7 @@ def init_db():
         
         if not users_table_exists:
             print("⚠️  Database tables not found. Please run the database_schema.sql script first.")
-            print("   Command: psql 'postgresql://neondb_owner:npg_EAvGDZI2wT7i@ep-proud-voice-a916tsx1-pooler.gwc.azure.neon.tech/neondb%ssslmode=require&channel_binding=require' -f database_schema.sql")
+            print("   Command: psql '$DATABASE_URL' -f database_schema.sql")
             return False
         else:
             print("✅ Database tables found")

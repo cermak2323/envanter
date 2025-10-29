@@ -1302,52 +1302,85 @@
             try {
                 html5QrCode = new Html5Qrcode("reader");
 
-                const cameraId = availableCameras[currentCameraIndex] && availableCameras[currentCameraIndex].id;
-
-                // Try multiple constraint strategies: deviceId exact -> facingMode environment -> default
-                const strategies = [];
-                if (cameraId) strategies.push({ deviceId: { exact: cameraId } });
-                strategies.push({ facingMode: { exact: 'environment' } });
-                strategies.push({ facingMode: 'environment' });
-                strategies.push({});
-
-                let started = false;
-                for (const strat of strategies) {
-                    // First verify we can open camera with getUserMedia
-                    const ok = await testGetUserMedia(strat);
-                    if (!ok) continue;
-
+                // Try to get the rear camera deviceId via getUserMedia facingMode
+                async function getDeviceIdForFacingMode(facing) {
                     try {
-                        // If we have a concrete cameraId and strategy used deviceId, pass the id string
-                        if (strat.deviceId && strat.deviceId.exact && typeof strat.deviceId.exact === 'string') {
-                            await html5QrCode.start(
-                                strat.deviceId.exact,
-                                { fps: 10, qrbox: { width: 250, height: 250 } },
-                                (decodedText, decodedResult) => { socket.emit('scan_qr', { qr_id: decodedText }); },
-                                (errorMessage) => { /* ignore */ }
-                            );
-                        } else {
-                            // Pass constraint object (html5-qrcode accepts facingMode in many browsers)
-                            await html5QrCode.start(
-                                strat,
-                                { fps: 10, qrbox: { width: 250, height: 250 } },
-                                (decodedText, decodedResult) => { socket.emit('scan_qr', { qr_id: decodedText }); },
-                                (errorMessage) => { /* ignore */ }
-                            );
-                        }
-
-                        started = true;
-                        break;
+                        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: facing } } });
+                        const track = s.getVideoTracks()[0];
+                        const settings = track.getSettings && track.getSettings();
+                        const deviceId = settings && settings.deviceId;
+                        // stop
+                        try { s.getTracks().forEach(t => t.stop()); } catch (e) {}
+                        return deviceId;
                     } catch (e) {
-                        console.warn('html5QrCode.start failed for strategy', strat, e);
-                        // try next
-                        try { await html5QrCode.stop(); } catch (_) {}
-                        html5QrCode = null;
+                        // try without exact
+                        try {
+                            const s2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
+                            const track2 = s2.getVideoTracks()[0];
+                            const settings2 = track2.getSettings && track2.getSettings();
+                            const deviceId2 = settings2 && settings2.deviceId;
+                            try { s2.getTracks().forEach(t => t.stop()); } catch (ee) {}
+                            return deviceId2;
+                        } catch (e2) {
+                            console.warn('getDeviceIdForFacingMode failed for', facing, e2);
+                            return null;
+                        }
                     }
                 }
 
-                if (!started) {
-                    throw new Error('Tüm stratejiler başarısız oldu, kamera başlatılamıyor');
+                let preferredDeviceId = null;
+                // If availableCameras labels exist, try to choose one containing rear/back keywords
+                try {
+                    if (availableCameras && availableCameras.length) {
+                        for (const cam of availableCameras) {
+                            const label = (cam.label || '').toLowerCase();
+                            if (label.includes('back') || label.includes('rear') || label.includes('environment') || label.includes('arka')) {
+                                preferredDeviceId = cam.id;
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) { console.warn('label check failed', e); }
+
+                // If not found, actively request facingMode environment to get deviceId
+                if (!preferredDeviceId) {
+                    preferredDeviceId = await getDeviceIdForFacingMode('environment');
+                }
+
+                // Fallback to first available camera
+                if (!preferredDeviceId && availableCameras && availableCameras.length) {
+                    preferredDeviceId = availableCameras[currentCameraIndex] && availableCameras[currentCameraIndex].id;
+                }
+
+                console.log('Preferred deviceId for start:', preferredDeviceId);
+
+                const successCallback = (decodedText, decodedResult) => {
+                    console.log('QR decoded:', decodedText, decodedResult);
+                    addScanMessage({ success: true, message: `Okunan QR: ${decodedText}` });
+                    // Emit to server
+                    try { socket.emit('scan_qr', { qr_id: decodedText }); } catch (e) { console.warn('socket emit failed', e); }
+                };
+
+                const errorCallback = (errorMessage) => {
+                    // Can display or ignore
+                    // console.warn('QR error:', errorMessage);
+                };
+
+                if (preferredDeviceId) {
+                    await html5QrCode.start(
+                        preferredDeviceId,
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        successCallback,
+                        errorCallback
+                    );
+                } else {
+                    // try facingMode if deviceId unavailable
+                    await html5QrCode.start(
+                        { facingMode: { exact: 'environment' } },
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        successCallback,
+                        errorCallback
+                    );
                 }
 
                 document.getElementById('reader').classList.add('active');
@@ -1358,7 +1391,6 @@
             } catch (err) {
                 console.error('Kamera başlatılamadı:', err);
                 addScanMessage({ success: false, message: 'Kamera başlatılamadı: ' + (err && err.message ? err.message : err) });
-                // ensure html5QrCode cleaned up
                 try { if (html5QrCode) { await html5QrCode.stop(); } } catch (_) {}
                 html5QrCode = null;
             }

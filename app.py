@@ -68,7 +68,7 @@ socketio = SocketIO(
     async_mode='eventlet',
     ping_timeout=60,
     ping_interval=25,
-    max_http_buffer_size=1e6
+    max_http_buffer_size=1000000  # Changed from 1e6 to integer value
 )
 
 # ======================
@@ -86,7 +86,7 @@ def mobile_optimizations():
     
     # Mobil ise cache header'ları optimize et
     if is_mobile:
-        request.is_mobile = True
+        pass  # Removed invalid assignment to request.is_mobile
 
 @app.after_request
 def add_performance_headers(response):
@@ -170,7 +170,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data:;"
     return response
 
 @app.after_request
@@ -327,6 +327,7 @@ def init_db_pool():
             dsn=DATABASE_URL
         )
         print("✅ PostgreSQL connection pool initialized successfully")
+        print("DEBUG: db_pool initialized with minconn=2, maxconn=15")
     except Exception as e:
         import traceback
         print(f"❌ Failed to initialize database pool: {e}")
@@ -1959,6 +1960,9 @@ def api_dashboard_stats():
     conn = get_db()
     cursor = conn.cursor()
     
+       
+    
+       
     # QR kodları sayısı
     cursor.execute('SELECT COUNT(*) FROM qr_codes')
     total_qr_codes = cursor.fetchone()[0]

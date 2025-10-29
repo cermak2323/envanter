@@ -1211,7 +1211,7 @@ def start_count_internal():
             
             cursor.execute('SELECT part_name FROM parts WHERE part_code = %s LIMIT 1', (part_code,))
             part_result = cursor.fetchone()
-            part_name = part_result[0] if part_result else 'Bilinmeyen Parça'
+            part_name = part_result[0] if part_result and part_result[0] else 'Unknown Part'
             
             cursor.execute('INSERT INTO inventory_data (session_id, part_code, expected_quantity) VALUES (%s, %s, %s)',
                          (session_id, part_code, quantity))
@@ -1459,7 +1459,7 @@ def finish_count():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Aktif sayım oturumu kontrolü
+    # Aktif sayım oturumunu kontrol et
     cursor.execute("SELECT session_id, status FROM count_sessions WHERE status = \'active\' LIMIT 1")
     session_result = cursor.fetchone()
     

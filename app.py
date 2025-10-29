@@ -592,9 +592,9 @@ def check_auth():
     if 'user_id' in session:
         return jsonify({
             'authenticated': True,
-            'username': session.get('username'),
-            'full_name': session.get('full_name'),
-            'role': session.get('role')
+            'username': session.get('username', None),
+            'full_name': session.get('full_name', None),
+            'role': session.get('role', None)
         })
     return jsonify({'authenticated': False})
 
@@ -1690,12 +1690,11 @@ def get_reports():
         rows = cursor.fetchall()
         reports = []
         for row in rows:
-            # Map DB columns to the frontend-expected format
             reports.append({
                 'id': row[0],
                 'session_id': row[1],
-                'filename': row[2],  # report_filename
-                'title': row[3],     # report_title
+                'filename': row[2],
+                'title': row[3],
                 'created_at': row[4],
                 'total_expected': row[5],
                 'total_scanned': row[6],

@@ -197,18 +197,129 @@ def rate_limit_login(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# PostgreSQL Configuration
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is required")
+# ----------------------
+# Configuration / Performance options
+# ----------------------
+
+# SQLAlchemy style engine options (used if you adapt parts of the app to SQLAlchemy)
+SQLALCHEMY_ENGINE_OPTIONS = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+    'pool_timeout': 20,
+    'max_overflow': 10,
+    'echo': False
+}
+
+# Response compression defaults (used if you integrate Flask-Compress)
+COMPRESS_MIMETYPES = [
+    'text/html', 'text/css', 'text/xml', 'application/json',
+    'application/javascript', 'text/javascript'
+]
+COMPRESS_LEVEL = 6
+COMPRESS_MIN_SIZE = 500
+
+# Base URL for the app (production override via env)
+BASE_URL = os.environ.get('BASE_URL', 'https://cermakservis.onrender.com')
+
+# Project root
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+# Database connection selection
+# Prefer internal Render DB when running on Render (set RENDER env var),
+# then SUPABASE_DATABASE_URL, then DATABASE_URL, then fallback to local sqlite.
+_raw_db_url = None
+if os.environ.get('RENDER'):
+    _raw_db_url = os.environ.get('RENDER_INTERNAL_DATABASE_URL') or os.environ.get('DATABASE_URL')
+if not _raw_db_url:
+    _raw_db_url = os.environ.get('SUPABASE_DATABASE_URL') or os.environ.get('DATABASE_URL')
+
+# Normalize postgres scheme to explicit SQLAlchemy+psycopg driver when possible
+_db_url = None
+if _raw_db_url and (_raw_db_url.startswith('postgres://') or _raw_db_url.startswith('postgresql://')):
+    if not _raw_db_url.startswith('postgresql+psycopg://'):
+        if _raw_db_url.startswith('postgres://'):
+            _db_url = _raw_db_url.replace('postgres://', 'postgresql+psycopg://', 1)
+        else:
+            _db_url = _raw_db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    else:
+        _db_url = _raw_db_url
+else:
+    _db_url = _raw_db_url
+
+
+# Hardcoded DATABASE_URL for immediate testing
+DATABASE_URL = "postgresql://cermak_user:XPNP4Yt8dsWdKaaxNlQOzIiRJjWoTrfC@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak?sslmode=require"
+
+# Debug: Print the DATABASE_URL from environment
+print(f"DEBUG: Environment DATABASE_URL = {os.environ.get('DATABASE_URL')}")
 
 # Connection Pool
 db_pool = None
 
+# If a local `config.py` exists (from your other system), load and apply defaults from it
+try:
+    import config as local_config
+    # Only set values that are not already configured from environment/earlier logic
+    for name in [
+        'SQLALCHEMY_ENGINE_OPTIONS', 'COMPRESS_MIMETYPES', 'COMPRESS_LEVEL', 'COMPRESS_MIN_SIZE',
+        'BASE_URL', 'BASE_DIR', 'UPLOAD_FOLDER', 'DOCUMENTS_FOLDER', 'PHOTOS_FOLDER',
+        'QR_CODES_FOLDER', 'QR_CODE_FOLDER'
+    ]:
+        if not globals().get(name) and hasattr(local_config, name):
+            globals()[name] = getattr(local_config, name)
+
+    # If running on Render and render internal URL is available in config, prefer it
+    if os.environ.get('RENDER'):
+        render_internal = getattr(local_config, 'RENDER_INTERNAL_DATABASE_URL', None)
+        if render_internal:
+            DATABASE_URL = render_internal
+    # If DATABASE_URL still missing but config provides one, use it
+    if (not DATABASE_URL or DATABASE_URL.startswith('sqlite:')) and getattr(local_config, 'DATABASE_URL', None):
+        DATABASE_URL = getattr(local_config, 'DATABASE_URL')
+except Exception:
+    # No local config or failed to import — continue using env / defaults
+    pass
+
+def validate_dsn(dsn):
+    """Validate the DSN string and ensure the port is an integer."""
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(dsn)
+        if parsed.port is None or not isinstance(parsed.port, int):
+            raise ValueError(f"Invalid port in DSN: {parsed.port}")
+        return True
+    except Exception as e:
+        logging.error(f"DSN validation failed: {e}")
+        return False
+
+# Update init_db_pool to validate DSN before initializing the pool
 def init_db_pool():
     """Initialize database connection pool"""
     global db_pool
     try:
+        # Debug: show which DSN we will use (mask password)
+        try:
+            _masked = DATABASE_URL
+            if _masked and '//' in _masked:
+                parts = _masked.split('//', 1)
+                creds_and_host = parts[1]
+                if '@' in creds_and_host:
+                    cred, rest = creds_and_host.split('@', 1)
+                    if ':' in cred:
+                        user, pwd = cred.split(':', 1)
+                        cred = f"{user}:<hidden>"
+                    _masked = parts[0] + '//' + cred + '@' + rest
+        except Exception:
+            _masked = '<unavailable>'
+        print(f"Initializing DB pool with DSN: {_masked}")
+
+        # Debug: Print the DATABASE_URL before validation
+        print(f"DEBUG: DATABASE_URL = {DATABASE_URL}")
+
+        # Validate DSN before proceeding
+        if not validate_dsn(DATABASE_URL):
+            raise ValueError("Invalid DATABASE_URL. Check the DSN format and port.")
+
         # Production ortamı için optimize edilmiş pool ayarları
         db_pool = SimpleConnectionPool(
             minconn=2,  # Minimum bağlantı sayısı artırıldı
@@ -217,7 +328,9 @@ def init_db_pool():
         )
         print("✅ PostgreSQL connection pool initialized successfully")
     except Exception as e:
+        import traceback
         print(f"❌ Failed to initialize database pool: {e}")
+        traceback.print_exc()
         raise
 
 # Initialize connection pool
@@ -1832,12 +1945,14 @@ def api_get_reports():
             'total_scanned': row[6],
             'accuracy_rate': row[7]
         })
+
     
     close_db(conn)
     return jsonify(reports)
 
 @app.route('/api/dashboard_stats')
 def api_dashboard_stats():
+   
     """Dashboard için genel istatistikler"""
     print("DEBUG: /api/dashboard_stats endpoint çağrıldı")  # DEBUG
     conn = get_db()

@@ -227,3 +227,21 @@
 2025-10-29 01:06:32,750 - werkzeug - INFO -  * Restarting with stat
 2025-10-29 01:06:38,294 - werkzeug - WARNING -  * Debugger is active!
 2025-10-29 01:06:38,297 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-29 19:35:47,696 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-29 19:38:11,056 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-29 19:44:42,984 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-29 19:49:07,864 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-29 19:49:55,343 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-29 19:51:42,707 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 19:51:46,851 - werkzeug - WARNING -  * Debugger is active!
+2025-10-29 19:51:46,854 - werkzeug - INFO -  * Debugger PIN: 648-734-028
+2025-10-29 20:19:33,220 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 20:19:37,429 - werkzeug - WARNING -  * Debugger is active!
+2025-10-29 20:19:37,431 - werkzeug - INFO -  * Debugger PIN: 648-734-028
+2025-10-29 20:20:36,693 - werkzeug - INFO -  * Detected change in 'c:\\Users\\PC\\Desktop\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-29 20:20:36,792 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 20:20:41,010 - werkzeug - WARNING -  * Debugger is active!
+2025-10-29 20:20:41,013 - werkzeug - INFO -  * Debugger PIN: 648-734-028
+2025-10-29 20:20:49,127 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 20:20:53,309 - werkzeug - WARNING -  * Debugger is active!
+2025-10-29 20:20:53,312 - werkzeug - INFO -  * Debugger PIN: 648-734-028

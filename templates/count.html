@@ -625,6 +625,14 @@
             justify-content: center;
             background: #f8f9fa;
         }
+
+        /* Ensure video inserted by html5-qrcode is visible */
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
         
         #reader.active {
             border-color: var(--cermak-red);
@@ -934,7 +942,7 @@
                 const localhostUrl = `http://localhost:5000${currentPath}`;
                 
                 // Kullanıcıya seçenek sun
-                if (confirm('Kamera özelliği için localhost kullanılması gerekiyor. Localhost\'a yönlendirilsin mi?\n\n' + localhostUrl)) {
+                if (confirm('Kamera özelliği için localhost kullanılması gerekiyor. Localhost\'a yönlendilsin mi?\n\n' + localhostUrl)) {
                     window.location.href = localhostUrl;
                     return;
                 }
@@ -1175,11 +1183,31 @@
                 if (!window.isSecureContext) {
                     throw new Error('Güvenli bağlam gerekiyor (HTTPS veya localhost)');
                 }
-                
-                availableCameras = await Html5Qrcode.getCameras();
-                console.log('Kameralar bulundu:', availableCameras.length);
-                
-                if (availableCameras.length === 0) {
+
+                // Öncelikle html5-qrcode üzerinden dene
+                try {
+                    availableCameras = await Html5Qrcode.getCameras();
+                    console.log('Html5Qrcode.getCameras returned', availableCameras);
+                } catch (e) {
+                    console.warn('Html5Qrcode.getCameras failed, will try navigator.enumerateDevices', e);
+                    availableCameras = [];
+                }
+
+                // Eğer boşsa, fallback olarak enumerateDevices ile videoinput bak
+                if (!availableCameras || availableCameras.length === 0) {
+                    try {
+                        const devices = await navigator.mediaDevices.enumerateDevices();
+                        const cams = devices.filter(d => d.kind === 'videoinput');
+                        availableCameras = cams.map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` }));
+                        console.log('enumerateDevices videoinput found', availableCameras);
+                    } catch (e) {
+                        console.warn('enumerateDevices failed', e);
+                    }
+                }
+
+                console.log('Kameralar bulundu:', (availableCameras || []).length, availableCameras);
+
+                if (!availableCameras || availableCameras.length === 0) {
                     addScanMessage({
                         success: false,
                         message: 'Kamera bulunamadı'
@@ -1187,25 +1215,25 @@
                 }
             } catch (err) {
                 console.error('Kamera listesi alınamadı:', err);
-                
+
                 let message = 'Kamera erişimi hatası';
-                if (err.message.includes('secure context') || err.message.includes('https')) {
+                if (err.message && (err.message.includes('secure context') || err.message.includes('https'))) {
                     message = 'HTTPS veya localhost kullanmanız gerekiyor';
                 } else if (err.name === 'NotAllowedError') {
                     message = 'Kamera erişim izni reddedildi';
                 } else if (err.name === 'NotFoundError') {
                     message = 'Kamera bulunamadı';
                 }
-                
+
                 addScanMessage({
                     success: false,
                     message: message
                 });
-                
+
                 // Kamera butonlarını devre dışı bırak ve manuel giriş seçeneği ekle
                 const startBtn = document.querySelector('.btn-start');
                 const cameraInfo = document.getElementById('cameraInfo');
-                
+
                 if (startBtn) {
                     startBtn.disabled = true;
                     startBtn.textContent = 'Kamera Kullanılamaz';
@@ -1213,7 +1241,7 @@
                 if (cameraInfo) {
                     cameraInfo.style.display = 'block';
                 }
-                
+
                 // Manuel QR kod giriş butonu ekle
                 const scannerControls = document.querySelector('.scanner-controls');
                 if (scannerControls && !document.querySelector('.btn-manual')) {
@@ -1231,9 +1259,9 @@
                 return;
             }
 
-            if (availableCameras.length === 0) {
+            if (!availableCameras || availableCameras.length === 0) {
                 await getCameras();
-                if (availableCameras.length === 0) {
+                if (!availableCameras || availableCameras.length === 0) {
                     addScanMessage({
                         success: false,
                         message: 'Hiç kamera bulunamadı'
@@ -1242,39 +1270,97 @@
                 }
             }
 
+            // Helper: quick getUserMedia test to ensure we can open a preview
+            async function testGetUserMedia(constraints) {
+                let stream = null;
+                const reader = document.getElementById('reader');
+                const debugVideo = document.createElement('video');
+                debugVideo.autoplay = true;
+                debugVideo.playsInline = true;
+                debugVideo.muted = true;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: constraints });
+                    debugVideo.srcObject = stream;
+                    // show a tiny preview to confirm
+                    const prevHtml = reader.innerHTML;
+                    reader.innerHTML = '';
+                    reader.appendChild(debugVideo);
+                    await new Promise(r => setTimeout(r, 600));
+                    // stop tracks
+                    stream.getTracks().forEach(t => t.stop());
+                    debugVideo.remove();
+                    reader.innerHTML = prevHtml;
+                    return true;
+                } catch (e) {
+                    console.warn('testGetUserMedia failed for', constraints, e);
+                    if (stream && stream.getTracks) stream.getTracks().forEach(t => t.stop());
+                    try { debugVideo.remove(); } catch (ignored) {}
+                    return false;
+                }
+            }
+
             try {
                 html5QrCode = new Html5Qrcode("reader");
-                const cameraId = availableCameras[currentCameraIndex].id;
-                
-                await html5QrCode.start(
-                    cameraId,
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 }
-                    },
-                    (decodedText, decodedResult) => {
-                        socket.emit('scan_qr', { qr_id: decodedText });
-                    },
-                    (errorMessage) => {
-                        // Sessizce hata mesajlarını göz ardı et
+
+                const cameraId = availableCameras[currentCameraIndex] && availableCameras[currentCameraIndex].id;
+
+                // Try multiple constraint strategies: deviceId exact -> facingMode environment -> default
+                const strategies = [];
+                if (cameraId) strategies.push({ deviceId: { exact: cameraId } });
+                strategies.push({ facingMode: { exact: 'environment' } });
+                strategies.push({ facingMode: 'environment' });
+                strategies.push({});
+
+                let started = false;
+                for (const strat of strategies) {
+                    // First verify we can open camera with getUserMedia
+                    const ok = await testGetUserMedia(strat);
+                    if (!ok) continue;
+
+                    try {
+                        // If we have a concrete cameraId and strategy used deviceId, pass the id string
+                        if (strat.deviceId && strat.deviceId.exact && typeof strat.deviceId.exact === 'string') {
+                            await html5QrCode.start(
+                                strat.deviceId.exact,
+                                { fps: 10, qrbox: { width: 250, height: 250 } },
+                                (decodedText, decodedResult) => { socket.emit('scan_qr', { qr_id: decodedText }); },
+                                (errorMessage) => { /* ignore */ }
+                            );
+                        } else {
+                            // Pass constraint object (html5-qrcode accepts facingMode in many browsers)
+                            await html5QrCode.start(
+                                strat,
+                                { fps: 10, qrbox: { width: 250, height: 250 } },
+                                (decodedText, decodedResult) => { socket.emit('scan_qr', { qr_id: decodedText }); },
+                                (errorMessage) => { /* ignore */ }
+                            );
+                        }
+
+                        started = true;
+                        break;
+                    } catch (e) {
+                        console.warn('html5QrCode.start failed for strategy', strat, e);
+                        // try next
+                        try { await html5QrCode.stop(); } catch (_) {}
+                        html5QrCode = null;
                     }
-                );
+                }
+
+                if (!started) {
+                    throw new Error('Tüm stratejiler başarısız oldu, kamera başlatılamıyor');
+                }
 
                 document.getElementById('reader').classList.add('active');
                 document.getElementById('startCameraBtn').style.display = 'none';
                 document.getElementById('stopCameraBtn').style.display = 'inline-block';
-                
-                addScanMessage({
-                    success: true,
-                    message: 'Kamera başlatıldı. QR kodları okutabilirsiniz.'
-                });
 
+                addScanMessage({ success: true, message: 'Kamera başlatıldı. QR kodları okutabilirsiniz.' });
             } catch (err) {
                 console.error('Kamera başlatılamadı:', err);
-                addScanMessage({
-                    success: false,
-                    message: 'Kamera başlatılamadı: ' + err.message
-                });
+                addScanMessage({ success: false, message: 'Kamera başlatılamadı: ' + (err && err.message ? err.message : err) });
+                // ensure html5QrCode cleaned up
+                try { if (html5QrCode) { await html5QrCode.stop(); } } catch (_) {}
+                html5QrCode = null;
             }
         }
 
@@ -1622,6 +1708,8 @@
             initializeGlobalFunctions();
             console.log('Tüm fonksiyonlar tekrar global scope\'a eklendi');
         }, 100);
+
+        console.log('Html5Qrcode script loaded:', typeof Html5Qrcode !== 'undefined');
     </script>
 
         <!-- Finish Count Modal -->

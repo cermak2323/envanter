@@ -1706,6 +1706,13 @@ def get_reports():
 
         except psycopg2.errors.UndefinedColumn:
             # Older/simpler schemas may not have file_path; fall back gracefully
+            # Need to rollback the failed statement's transaction first, otherwise
+            # subsequent commands are rejected with InFailedSqlTransaction.
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            cursor = conn.cursor()
             cursor.execute('''
                 SELECT id, session_id, report_name, created_at,
                        total_expected, total_scanned, accuracy_rate

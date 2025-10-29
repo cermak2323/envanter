@@ -919,8 +919,8 @@ def download_single_qr(qr_id):
         
         return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
 
-# Admin şifre konstansı (Environment'dan al)
-ADMIN_PASSWORD = os.environ.get('ADMIN_COUNT_PASSWORD', "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J")
+# Admin password: prefer ADMIN_PASSWORD env var, fall back to ADMIN_COUNT_PASSWORD for backwards compatibility
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or os.environ.get('ADMIN_COUNT_PASSWORD', "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J")
 
 @app.route('/admin')
 def admin_login():
@@ -1948,28 +1948,29 @@ if __name__ == '__main__':
     try:
         init_db()
     except Exception as e:
-        print(f"❌ Failed to initialize database: {e}")
-    
-    port = get_port()
-    is_production = is_render_deployment()
-    
-    if is_production:
-        print("🌐 Starting EnvanterQR on Render.com...")
-        print(f"� Production Mode - Port: {port}")
-        print("☁️ Storage: Backblaze B2 Enabled")
-        print("🔒 Security: Production Headers Active")
-        
-        # Production mode - Gunicorn ile çalışır
-        # Bu kod sadece debug için, gerçek production'da gunicorn kullanılır
-        socketio.run(app, host='0.0.0.0', port=port, debug=False)
-    else:
-        print("�🚀 Starting EnvanterQR System v2.0...")
-        print("📊 Dashboard: http://localhost:5001")
-        print("🔐 Admin Panel: http://localhost:5001/admin")
-        print("🏥 Health Check: http://localhost:5001/health")
-        print("📈 Metrics: http://localhost:5001/metrics")
-        print("☁️ Storage: Backblaze B2 Enabled")
-        print("🔒 Security: Headers + Rate Limiting Active")
+        # The count_reports table may not contain a created_by/user id column in some schemas.
+        # Select only existing columns and avoid a JOIN that assumes a user relation.
+        cursor.execute('''
+            SELECT id, session_id, file_path, report_name, created_at, 
+                   total_expected, total_scanned, accuracy_rate
+            FROM count_reports
+            ORDER BY created_at DESC
+        ''')
+
+        reports = []
+        for row in cursor.fetchall():
+            reports.append({
+                'id': row[0],
+                'session_id': row[1],
+                'filename': row[2],
+                'title': row[3],
+                'created_at': row[4],
+                'total_expected': row[5],
+                'total_scanned': row[6],
+                'total_difference': row[6] - row[5] if row[5] is not None and row[6] is not None else None,
+                # created_by is not tracked in this schema; provide a sensible default
+                'created_by': 'Bilinmeyen'
+            })
         print()
         
         # Development mode

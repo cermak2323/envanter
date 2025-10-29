@@ -245,3 +245,12 @@
 2025-10-29 20:20:49,127 - werkzeug - INFO -  * Restarting with stat
 2025-10-29 20:20:53,309 - werkzeug - WARNING -  * Debugger is active!
 2025-10-29 20:20:53,312 - werkzeug - INFO -  * Debugger PIN: 648-734-028
+2025-10-29 20:37:29,749 - werkzeug - INFO -  * Detected change in 'c:\\Users\\PC\\Desktop\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-29 20:37:29,889 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 20:37:34,184 - werkzeug - WARNING -  * Debugger is active!
+2025-10-29 20:37:34,184 - werkzeug - INFO -  * Debugger PIN: 648-734-028
+2025-10-29 21:09:04,467 - werkzeug - INFO -  * Detected change in 'c:\\Users\\PC\\Desktop\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-29 21:09:04,570 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 21:11:45,239 - werkzeug - INFO -  * Restarting with stat
+2025-10-29 21:11:49,319 - werkzeug - WARNING -  * Debugger is active!
+2025-10-29 21:11:49,319 - werkzeug - INFO -  * Debugger PIN: 648-734-028

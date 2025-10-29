@@ -1301,47 +1301,44 @@ def start_count_internal():
     
     try:
         df = pd.read_excel(file)
-        
-        required_columns = ['part_code', 'quantity']
+
+        required_columns = ['part_code', 'quantity', 'part_name']
         if not all(col in df.columns for col in required_columns):
-            return jsonify({'error': 'Excel dosyası "part_code" ve "quantity" sütunlarını içermelidir'}), 400
-        
+            return jsonify({'error': 'Excel dosyası "part_code", "quantity" ve "part_name" sütunlarını içermelidir'}), 400
+
         conn = get_db()
         cursor = conn.cursor()
-        
-        cursor.execute("SELECT COUNT(*) as count FROM count_sessions WHERE status = \'active\'")
+
+        cursor.execute("SELECT COUNT(*) as count FROM count_sessions WHERE status = 'active'")
         active_session = cursor.fetchone()
         if active_session[0] > 0:
             close_db(conn)
             return jsonify({'error': 'Aktif bir sayım oturumu var. Önce mevcut sayımı bitirin.'}), 400
-        
+
         session_id = uuid.uuid4().hex
         cursor.execute('INSERT INTO count_sessions (session_id, status) VALUES (%s, %s)', (session_id, 'active'))
-        
+
         for _, row in df.iterrows():
             part_code = str(row['part_code'])
             quantity = int(row['quantity'])
-            
-            cursor.execute('SELECT part_name FROM parts WHERE part_code = %s LIMIT 1', (part_code,))
-            part_result = cursor.fetchone()
-            part_name = part_result[0] if part_result and part_result[0] else 'Unknown Part'
-            
-            cursor.execute('INSERT INTO inventory_data (session_id, part_code, expected_quantity) VALUES (%s, %s, %s)',
-                         (session_id, part_code, quantity))
-        
+            part_name = str(row['part_name']) if 'part_name' in row and row['part_name'] else 'Unknown Part'
+
+            cursor.execute('INSERT INTO inventory_data (session_id, part_code, part_name, expected_quantity) VALUES (%s, %s, %s, %s)',
+                         (session_id, part_code, part_name, quantity))
+
         # Güçlü parola oluştur ve kaydet
         count_password = generate_strong_password()
         print(f"DEBUG: Oluşturulan şifre: {count_password}")  # Debug
         cursor.execute('INSERT INTO count_passwords (session_id, password, created_by) VALUES (%s, %s, %s)',
                      (session_id, count_password, session['user_id']))
-        
+
         conn.commit()
         close_db(conn)
-        
+
         session['current_session'] = session_id
-        
+
         socketio.emit('count_started', {'session_id': session_id})
-        
+
         response_data = {
             'success': True,
             'session_id': session_id,
@@ -1350,7 +1347,7 @@ def start_count_internal():
         }
         print(f"DEBUG: Response data: {response_data}")  # Debug
         return jsonify(response_data)
-    
+
     except Exception as e:
         return jsonify({'error': f'Hata: {str(e)}'}), 500
 

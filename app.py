@@ -1680,33 +1680,59 @@ def get_reports():
         conn = get_db()
         cursor = conn.cursor()
 
-        # Select only the columns we know exist in the schema to avoid runtime errors
-        cursor.execute('''
-            SELECT id, session_id, file_path, report_name, created_at,
-                   total_expected, total_scanned, accuracy_rate
-            FROM count_reports
-            ORDER BY created_at DESC
-        ''')
+        # Try the richer schema first (some deployments include file_path)
+        try:
+            cursor.execute('''
+                SELECT id, session_id, file_path, report_name, created_at,
+                       total_expected, total_scanned, accuracy_rate
+                FROM count_reports
+                ORDER BY created_at DESC
+            ''')
 
-        reports = []
-        for row in cursor.fetchall():
-            reports.append({
-                'id': row[0],
-                'session_id': row[1],
-                'filename': row[2],
-                'title': row[3],
-                'created_at': row[4],
-                'total_expected': row[5],
-                'total_scanned': row[6],
-                'total_difference': (row[6] - row[5]) if (row[5] is not None and row[6] is not None) else None,
-                'created_by': 'Bilinmeyen'
-            })
+            rows = cursor.fetchall()
+            reports = []
+            for row in rows:
+                reports.append({
+                    'id': row[0],
+                    'session_id': row[1],
+                    'filename': row[2],
+                    'title': row[3],
+                    'created_at': row[4],
+                    'total_expected': row[5],
+                    'total_scanned': row[6],
+                    'total_difference': (row[6] - row[5]) if (row[5] is not None and row[6] is not None) else None,
+                    'created_by': 'Bilinmeyen'
+                })
+
+        except psycopg2.errors.UndefinedColumn:
+            # Older/simpler schemas may not have file_path; fall back gracefully
+            cursor.execute('''
+                SELECT id, session_id, report_name, created_at,
+                       total_expected, total_scanned, accuracy_rate
+                FROM count_reports
+                ORDER BY created_at DESC
+            ''')
+
+            rows = cursor.fetchall()
+            reports = []
+            for row in rows:
+                # Map columns for the simpler schema
+                reports.append({
+                    'id': row[0],
+                    'session_id': row[1],
+                    'filename': None,
+                    'title': row[2],
+                    'created_at': row[3],
+                    'total_expected': row[4],
+                    'total_scanned': row[5],
+                    'total_difference': (row[5] - row[4]) if (row[4] is not None and row[5] is not None) else None,
+                    'created_by': 'Bilinmeyen'
+                })
 
         return jsonify(reports)
 
     except Exception as e:
         logging.exception(f"Error in get_reports: {e}")
-        # Always return JSON error so the frontend doesn't try to parse HTML
         return jsonify({'error': 'Internal server error'}), 500
     finally:
         try:

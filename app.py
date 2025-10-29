@@ -1302,9 +1302,10 @@ def start_count_internal():
     try:
         df = pd.read_excel(file)
 
-        required_columns = ['part_code', 'quantity', 'part_name']
+
+        required_columns = ['part_code', 'quantity']
         if not all(col in df.columns for col in required_columns):
-            return jsonify({'error': 'Excel dosyası "part_code", "quantity" ve "part_name" sütunlarını içermelidir'}), 400
+            return jsonify({'error': 'Excel dosyası "part_code" ve "quantity" sütunlarını içermelidir'}), 400
 
         conn = get_db()
         cursor = conn.cursor()
@@ -1321,7 +1322,10 @@ def start_count_internal():
         for _, row in df.iterrows():
             part_code = str(row['part_code'])
             quantity = int(row['quantity'])
-            part_name = str(row['part_name']) if 'part_name' in row and row['part_name'] else 'Unknown Part'
+            # part_name veritabanından alınacak
+            cursor.execute('SELECT part_name FROM parts WHERE part_code = %s LIMIT 1', (part_code,))
+            part_result = cursor.fetchone()
+            part_name = part_result[0] if part_result and part_result[0] else 'Unknown Part'
 
             cursor.execute('INSERT INTO inventory_data (session_id, part_code, part_name, expected_quantity) VALUES (%s, %s, %s, %s)',
                          (session_id, part_code, part_name, quantity))

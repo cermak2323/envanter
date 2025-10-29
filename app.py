@@ -678,7 +678,13 @@ def upload_parts():
         })
     
     except Exception as e:
-        return jsonify({'error': f'Hata: {str(e)}'}), 500
+        # Log full traceback for diagnostics and ensure DB connection is returned to pool
+        logging.exception(f"Error in start_count_internal: {e}")
+        try:
+            close_db(conn)
+        except Exception:
+            pass
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/get_qr_codes')
 @login_required

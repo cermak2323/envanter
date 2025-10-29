@@ -1675,34 +1675,45 @@ def clear_all_qrs():
 @app.route('/get_reports')
 @login_required
 def get_reports():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT cr.id, cr.session_id, cr.file_path, cr.report_name, 
-               cr.created_at, cr.total_expected, cr.total_scanned, cr.accuracy_rate,
-               u.full_name as created_by_name
-        FROM count_reports cr
-        LEFT JOIN users u ON cr.id = u.id
-        ORDER BY cr.created_at DESC
-    ''')
-    
-    reports = []
-    for row in cursor.fetchall():
-        reports.append({
-            'id': row[0],
-            'session_id': row[1],
-            'filename': row[2],
-            'title': row[3],
-            'created_at': row[4],
-            'total_expected': row[5],
-            'total_scanned': row[6],
-            'total_difference': row[7],
-            'created_by': row[8] or 'Bilinmeyen'
-        })
-    
-    close_db(conn)
-    return jsonify(reports)
+    conn = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Select only the columns we know exist in the schema to avoid runtime errors
+        cursor.execute('''
+            SELECT id, session_id, file_path, report_name, created_at,
+                   total_expected, total_scanned, accuracy_rate
+            FROM count_reports
+            ORDER BY created_at DESC
+        ''')
+
+        reports = []
+        for row in cursor.fetchall():
+            reports.append({
+                'id': row[0],
+                'session_id': row[1],
+                'filename': row[2],
+                'title': row[3],
+                'created_at': row[4],
+                'total_expected': row[5],
+                'total_scanned': row[6],
+                'total_difference': (row[6] - row[5]) if (row[5] is not None and row[6] is not None) else None,
+                'created_by': 'Bilinmeyen'
+            })
+
+        return jsonify(reports)
+
+    except Exception as e:
+        logging.exception(f"Error in get_reports: {e}")
+        # Always return JSON error so the frontend doesn't try to parse HTML
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        try:
+            if conn:
+                close_db(conn)
+        except Exception:
+            pass
 
 @app.route('/download_report/<filename>')
 @login_required
@@ -1948,30 +1959,24 @@ if __name__ == '__main__':
     try:
         init_db()
     except Exception as e:
-        # The count_reports table may not contain a created_by/user id column in some schemas.
-        # Select only existing columns and avoid a JOIN that assumes a user relation.
-        cursor.execute('''
-            SELECT id, session_id, file_path, report_name, created_at, 
-                   total_expected, total_scanned, accuracy_rate
-            FROM count_reports
-            ORDER BY created_at DESC
-        ''')
+        print(f"❌ Failed to initialize database: {e}")
 
-        reports = []
-        for row in cursor.fetchall():
-            reports.append({
-                'id': row[0],
-                'session_id': row[1],
-                'filename': row[2],
-                'title': row[3],
-                'created_at': row[4],
-                'total_expected': row[5],
-                'total_scanned': row[6],
-                'total_difference': row[6] - row[5] if row[5] is not None and row[6] is not None else None,
-                # created_by is not tracked in this schema; provide a sensible default
-                'created_by': 'Bilinmeyen'
-            })
+    port = get_port()
+    is_production = is_render_deployment()
+
+    if is_production:
+        print("🌐 Starting EnvanterQR on Render.com...")
+        print(f"� Production Mode - Port: {port}")
+        print("☁️ Storage: Backblaze B2 Enabled")
+        print("🔒 Security: Production Headers Active")
+        socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    else:
+        print("�🚀 Starting EnvanterQR System v2.0...")
+        print("📊 Dashboard: http://localhost:5001")
+        print("🔐 Admin Panel: http://localhost:5001/admin")
+        print("🏥 Health Check: http://localhost:5001/health")
+        print("📈 Metrics: http://localhost:5001/metrics")
+        print("☁️ Storage: Backblaze B2 Enabled")
+        print("🔒 Security: Headers + Rate Limiting Active")
         print()
-        
-        # Development mode
         socketio.run(app, host='localhost', port=5001, debug=True)

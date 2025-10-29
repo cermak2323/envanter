@@ -1525,7 +1525,7 @@ def finish_count():
     # Raporu veritabanına kaydet
     report_title = f"Sayım Raporu - {datetime.now().strftime('%d.%m.%Y %H:%M')}"
     cursor.execute('''
-        INSERT INTO count_reports (session_id, file_path, report_name, 
+        INSERT INTO count_reports (session_id, report_filename, report_title, 
                                  total_expected, total_scanned, accuracy_rate)
         VALUES (%s, %s, %s, %s, %s, %s)
     ''', (session_id, report_filename, report_title, 
@@ -1679,62 +1679,29 @@ def get_reports():
     try:
         conn = get_db()
         cursor = conn.cursor()
-
-        # Try the richer schema first (some deployments include file_path)
-        try:
-            cursor.execute('''
-                SELECT id, session_id, file_path, report_name, created_at,
-                       total_expected, total_scanned, accuracy_rate
-                FROM count_reports
-                ORDER BY created_at DESC
-            ''')
-
-            rows = cursor.fetchall()
-            reports = []
-            for row in rows:
-                reports.append({
-                    'id': row[0],
-                    'session_id': row[1],
-                    'filename': row[2],
-                    'title': row[3],
-                    'created_at': row[4],
-                    'total_expected': row[5],
-                    'total_scanned': row[6],
-                    'total_difference': (row[6] - row[5]) if (row[5] is not None and row[6] is not None) else None,
-                    'created_by': 'Bilinmeyen'
-                })
-
-        except psycopg2.errors.UndefinedColumn:
-            # Older/simpler schemas may not have file_path; fall back gracefully
-            # Need to rollback the failed statement's transaction first, otherwise
-            # subsequent commands are rejected with InFailedSqlTransaction.
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, session_id, report_name, created_at,
-                       total_expected, total_scanned, accuracy_rate
-                FROM count_reports
-                ORDER BY created_at DESC
-            ''')
-
-            rows = cursor.fetchall()
-            reports = []
-            for row in rows:
-                # Map columns for the simpler schema
-                reports.append({
-                    'id': row[0],
-                    'session_id': row[1],
-                    'filename': None,
-                    'title': row[2],
-                    'created_at': row[3],
-                    'total_expected': row[4],
-                    'total_scanned': row[5],
-                    'total_difference': (row[5] - row[4]) if (row[4] is not None and row[5] is not None) else None,
-                    'created_by': 'Bilinmeyen'
-                })
+        # Use the correct column names from schema
+        cursor.execute('''
+            SELECT id, session_id, report_filename, report_title, created_at,
+                   total_expected, total_scanned, accuracy_rate
+            FROM count_reports
+            ORDER BY created_at DESC
+        ''')
+        
+        rows = cursor.fetchall()
+        reports = []
+        for row in rows:
+            # Map DB columns to the frontend-expected format
+            reports.append({
+                'id': row[0],
+                'session_id': row[1],
+                'filename': row[2],  # report_filename
+                'title': row[3],     # report_title
+                'created_at': row[4],
+                'total_expected': row[5],
+                'total_scanned': row[6],
+                'total_difference': (row[6] - row[5]) if (row[5] is not None and row[6] is not None) else None,
+                'created_by': 'Bilinmeyen'  # Default since we don't track creator
+            })
 
         return jsonify(reports)
 

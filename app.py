@@ -29,6 +29,10 @@ import json
 # Load environment variables
 load_dotenv()
 
+# SQLAlchemy ve Models - Veritabanı ORM
+from models import db, PartCode, QRCode, CountSession, ScannedQR, User, CountPassword
+from db_config import DevelopmentConfig, ProductionConfig
+
 # Logging Configuration
 from logging.handlers import RotatingFileHandler
 import os
@@ -57,6 +61,15 @@ security_logger.setLevel(logging.WARNING)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# Ortama göre SQLAlchemy config'ini seç
+if os.environ.get('RENDER'):
+    app.config.from_object(ProductionConfig)
+else:
+    app.config.from_object(DevelopmentConfig)
+
+# SQLAlchemy'yi app'e bağla
+db.init_app(app)
 
 # Static dosya sıkıştırma için
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 yıl cache
@@ -449,56 +462,53 @@ def create_performance_indexes(cursor):
         print(f"⚠️ Warning: Could not create some indexes: {e}")
 
 def init_db():
-    """Initialize PostgreSQL database tables and performance indexes"""
-    conn = get_db()
-    cursor = conn.cursor()
+    """Initialize database tables using SQLAlchemy ORM
     
+    Lokal: SQLite tables oluştur
+    Production: PostgreSQL tables kontrol et
+    """
     try:
-        print("🔄 Checking database tables...")
-        
-        # Check if users table exists
-        cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'users'
-            );
-        """)
-        
-        users_table_exists = cursor.fetchone()[0]
-        
-        if not users_table_exists:
-            print("⚠️  Database tables not found. Please run the database_schema.sql script first.")
-            print("   Command: psql '$DATABASE_URL' -f database_schema.sql")
-            return False
-        else:
-            print("✅ Database tables found")
-        
-        # Create performance indexes if they don't exist
-        create_performance_indexes(cursor)
-        
-        # Check if default admin user exists, if not create one
-        cursor.execute('SELECT COUNT(*) FROM users WHERE username = %s', ('admin',))
-        if cursor.fetchone()[0] == 0:
-            import hashlib
-            # Generate strong default password
-            default_admin_pass = generate_strong_password()
-            admin_password_hash = hashlib.sha256(default_admin_pass.encode()).hexdigest()
-            cursor.execute('INSERT INTO users (username, password, password_hash, full_name, role) VALUES (%s, %s, %s, %s, %s)',
-                         ('admin', default_admin_pass, admin_password_hash, 'Administrator', 'admin'))
-            print(f"✅ Default admin user created with secure password")
-            print(f"⚠️  Please save this password securely: {default_admin_pass}")
-        
-        conn.commit()
-        return True
-        
+        with app.app_context():
+            # Tablolar var mı kontrol et
+            inspector = db.inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+            required_tables = ['users', 'part_codes', 'qr_codes', 'count_sessions', 'count_passwords', 'scanned_qr']
+            
+            missing_tables = [t for t in required_tables if t not in existing_tables]
+            
+            if missing_tables:
+                print(f"📋 Creating missing tables: {', '.join(missing_tables)}")
+                db.create_all()
+                print("✅ All database tables created successfully")
+            else:
+                print("✅ All database tables already exist")
+            
+            # Default admin user var mı kontrol et
+            admin_user = User.query.filter_by(username='admin').first()
+            if not admin_user:
+                print("➕ Creating default admin user...")
+                admin_password = hashlib.sha256("admin123".encode()).hexdigest()
+                admin = User(
+                    username='admin',
+                    full_name='Administrator',
+                    password_hash=admin_password,
+                    role='admin',
+                    is_active_user=True
+                )
+                db.session.add(admin)
+                db.session.commit()
+                print("✅ Default admin user created (admin/admin123)")
+                print("⚠️  CHANGE THIS PASSWORD IN PRODUCTION!")
+            else:
+                print("✅ Admin user already exists")
+            
+            return True
+            
     except Exception as e:
-        conn.rollback()
-        print(f"❌ Error checking database: {e}")
-        print("💡 Please manually run database_schema.sql to create tables")
+        print(f"❌ Database initialization error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
-    finally:
-        close_db(conn)
 
 def login_required(f):
     from functools import wraps
@@ -2187,6 +2197,14 @@ def is_render_deployment():
 def get_port():
     """Port numarasını al"""
     return int(os.environ.get('PORT', 5001))
+
+# QR Admin Blueprint'ini register et
+try:
+    from qr_admin import qr_admin_bp
+    app.register_blueprint(qr_admin_bp)
+    print("✅ QR Admin Panel registered")
+except Exception as e:
+    print(f"⚠️ QR Admin Panel registration failed: {e}")
 
 if __name__ == '__main__':
     # Initialize database on startup

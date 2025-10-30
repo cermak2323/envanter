@@ -1,118 +1,74 @@
-import sqlite3
+#!/usr/bin/env python
+"""
+Veritabanı Tabloları Oluştur
+Lokal SQLite veya Production PostgreSQL için
+"""
+
 import os
+import sys
+from pathlib import Path
 
-def init_database():
-    # Mevcut database dosyasını kontrol et
-    db_file = 'inventory_qr.db'
-    if os.path.exists(db_file):
-        print(f'Existing database found: {db_file}')
+# Proje dizinini path'e ekle
+sys.path.insert(0, str(Path(__file__).parent))
 
-    conn = sqlite3.connect(db_file)
-    cursor = conn.cursor()
+# Flask uygulamasını yapılandır
+os.environ.setdefault('FLASK_ENV', 'development')
 
-    print('Creating tables...')
+from models import db, PartCode, QRCode, CountSession, ScannedQR, User, CountPassword
+from db_config import DevelopmentConfig, ProductionConfig
 
-    # Users table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            full_name TEXT NOT NULL,
-            role TEXT DEFAULT 'user',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+# Flask uygulaması oluştur (app.py'yi import etmiyoruz, kendi oluşturuyoruz)
+from flask import Flask
 
-    # QR codes table with all required columns
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS qr_codes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            qr_id TEXT UNIQUE NOT NULL,
-            part_code TEXT NOT NULL,
-            part_name TEXT NOT NULL,
-            is_used INTEGER DEFAULT 0,
-            is_downloaded INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            used_at TIMESTAMP,
-            downloaded_at TIMESTAMP
-        )
-    ''')
+app = Flask(__name__)
 
-    # Count sessions table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS count_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT UNIQUE NOT NULL,
-            status TEXT DEFAULT 'active',
-            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            finished_at TIMESTAMP
-        )
-    ''')
+# Ortama göre config seç
+if os.environ.get('RENDER'):
+    print("🌐 Production (Render.com) konfigürasyonu kullanılıyor...")
+    app.config.from_object(ProductionConfig)
+else:
+    print("💻 Development (Lokal SQLite) konfigürasyonu kullanılıyor...")
+    app.config.from_object(DevelopmentConfig)
 
-    # Inventory data table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS inventory_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            part_code TEXT NOT NULL,
-            expected_quantity INTEGER NOT NULL,
-            session_id TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+# SQLAlchemy'yi app'e bağla
+db.init_app(app)
 
-    # Scanned QR table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS scanned_qr (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            qr_id TEXT NOT NULL,
-            part_code TEXT NOT NULL,
-            scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            session_id TEXT NOT NULL
-        )
-    ''')
-
-    # Parts table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS parts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            part_code TEXT NOT NULL,
-            part_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    # Count reports table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS count_reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT NOT NULL,
-            report_name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            started_at TIMESTAMP,
-            finished_at TIMESTAMP,
-            total_expected INTEGER DEFAULT 0,
-            total_scanned INTEGER DEFAULT 0,
-            accuracy_rate REAL DEFAULT 0.0
-        )
-    ''')
-
-    conn.commit()
-
-    # Verify tables
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = cursor.fetchall()
-    print('Created tables:', [table[0] for table in tables])
-
-    # Check qr_codes table structure
-    cursor.execute('PRAGMA table_info(qr_codes)')
-    columns = cursor.fetchall()
-    print('qr_codes table columns:', [col[1] for col in columns])
-
-    conn.close()
-    print('Database initialized successfully!')
+def create_tables():
+    """Veritabanı tablolarını oluştur"""
+    with app.app_context():
+        print("🔨 Veritabanı tabloları oluşturuluyor...")
+        print(f"📍 Environment: {os.environ.get('FLASK_ENV', 'development')}")
+        print(f"💾 Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI', 'unknown')[:50]}...")
+        
+        try:
+            db.create_all()
+            print("✅ Tüm tablolar başarıyla oluşturuldu!")
+            
+            # Tablolar hakkında bilgi ver
+            inspector = db.inspect(db.engine)
+            tables = inspector.get_table_names()
+            
+            print(f"\n📋 Oluşturulan Tablolar ({len(tables)}):")
+            for table in sorted(tables):
+                columns = inspector.get_columns(table)
+                print(f"  ├─ {table} ({len(columns)} kolon)")
+                if len(columns) <= 5:
+                    for col in columns:
+                        print(f"  │  ├─ {col['name']}: {col['type']}")
+                else:
+                    for col in columns[:3]:
+                        print(f"  │  ├─ {col['name']}: {col['type']}")
+                    print(f"  │  ├─ ... (+{len(columns)-3} kolon)")
+            
+            print("\n✨ Başarılı!")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Hata: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
 
 if __name__ == '__main__':
-    init_database()
+    success = create_tables()
+    sys.exit(0 if success else 1)

@@ -1,5 +1,6 @@
 """
 Veritabanı Konfigürasyonu - Lokal SQLite vs Production PostgreSQL
+TAMAMEN BAĞIMSIZ - Aralarında sinkronizasyon YOK
 """
 
 import os
@@ -8,16 +9,22 @@ from pathlib import Path
 # Ortamı belirle
 ENVIRONMENT = os.environ.get('FLASK_ENV', 'development')  # development, production
 IS_PRODUCTION = ENVIRONMENT == 'production' or bool(os.environ.get('RENDER'))
+IS_LOCAL = not IS_PRODUCTION
 
 # Proje kök dizini
 BASE_DIR = Path(__file__).parent
 
 print(f"🔧 Environment: {ENVIRONMENT}")
-print(f"📍 Production: {IS_PRODUCTION}")
+print(f"📍 Production (Render.com): {IS_PRODUCTION}")
+print(f"🏠 Lokal (Development): {IS_LOCAL}")
+print()
 
 
 def get_database_uri():
-    """Veritabanı URI'sini ortama göre döndür"""
+    """
+    Veritabanı URI'sini ortama göre döndür
+    UYARI: Lokal ve Production tamamen bağımsız!
+    """
     
     if IS_PRODUCTION:
         # PRODUCTION: Render.com PostgreSQL
@@ -29,15 +36,17 @@ def get_database_uri():
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         
-        print(f"✅ Production PostgreSQL: {database_url[:50]}...")
+        print(f"☁️ Production PostgreSQL: {database_url[:50]}...")
+        print(f"⚠️  Render.com'un kendi PostgreSQL veritabanı kullanılıyor")
         return database_url
     else:
-        # DEVELOPMENT: Lokal SQLite
+        # DEVELOPMENT: Lokal SQLite (BAĞIMSIZ)
         db_path = BASE_DIR / 'instance' / 'envanter_local.db'
         db_path.parent.mkdir(exist_ok=True)
         
         sqlite_uri = f'sqlite:///{db_path}'
-        print(f"✅ Development SQLite: {db_path}")
+        print(f"🏠 Lokal SQLite: {db_path}")
+        print(f"⚠️  Tamamen bağımsız veritabanı - Render.com etkilenmez")
         return sqlite_uri
 
 
@@ -52,7 +61,14 @@ class Config:
 
 
 class DevelopmentConfig(Config):
-    """Geliştirme Ortamı - SQLite"""
+    """
+    Geliştirme Ortamı - SQLite (BAĞIMSIZ)
+    
+    ✅ Lokal makina üzerinde çalışır
+    ✅ Render.com'dan tamamen izole
+    ✅ Test ve geliştirme için ideal
+    ✅ Sayım başlatma - sadece lokal verileri etkiler
+    """
     DEBUG = True
     TESTING = False
     SQLALCHEMY_DATABASE_URI = get_database_uri()
@@ -64,7 +80,14 @@ class DevelopmentConfig(Config):
 
 
 class ProductionConfig(Config):
-    """Üretim Ortamı - PostgreSQL"""
+    """
+    Üretim Ortamı - PostgreSQL (BAĞIMSIZ)
+    
+    ✅ Render.com PostgreSQL
+    ✅ Lokal'dan tamamen izole
+    ✅ Üretim verisi korumalı
+    ✅ Sayım başlatma - sadece üretim verileri etkiler
+    """
     DEBUG = False
     TESTING = False
     SQLALCHEMY_DATABASE_URI = get_database_uri()
@@ -91,8 +114,13 @@ class TestingConfig(Config):
 if IS_PRODUCTION:
     config = ProductionConfig()
     config_name = 'production'
+    db_type = 'PostgreSQL (Render.com)'
 else:
     config = DevelopmentConfig()
     config_name = 'development'
+    db_type = 'SQLite (Lokal)'
 
 print(f"📋 Active Config: {config_name}")
+print(f"💾 Database Type: {db_type}")
+print(f"🔐 Veritabanlar TAMAMEN BAĞIMSIZ - Hiçbir sinkronizasyon YOK")
+print(f"="*60)

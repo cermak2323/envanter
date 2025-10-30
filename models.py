@@ -65,7 +65,7 @@ class CountSession(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_by = db.Column(db.Integer, db.ForeignKey('envanter_users.id'))
     status = db.Column(db.String(20), default='active')  # active, completed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     finished_at = db.Column(db.DateTime)
@@ -84,7 +84,7 @@ class ScannedQR(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(100), db.ForeignKey('count_sessions.session_id'), nullable=False)
     qr_code_id = db.Column(db.Integer, db.ForeignKey('qr_codes.id'), nullable=False)
-    scanned_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    scanned_by = db.Column(db.Integer, db.ForeignKey('envanter_users.id'))
     scanned_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # İlişkiler
@@ -97,9 +97,12 @@ class ScannedQR(db.Model):
 
 class User(db.Model):
     """
-    Kullanıcılar - Production PostgreSQL şemasıyla tam uyum
+    EnvanterQR Kullanıcıları - Kendi ayrı table'ında
     
-    Production (cermakservis + EnvanterQR):
+    Ayrı table: envanter_users
+    (cermakservis uygulaması kendi users table'ını kullanıyor)
+    
+    Kolonlar:
     - Core: id, username, password, password_hash, full_name, role, created_at
     - Extended: email, real_name, job_title, title, work_position, user_group, user_role
     - Files: signature_path, profile_image_path
@@ -112,7 +115,7 @@ class User(db.Model):
     
     Toplam: 31 kolon
     """
-    __tablename__ = 'users'
+    __tablename__ = 'envanter_users'
     
     id = db.Column(db.Integer, primary_key=True)
     
@@ -176,7 +179,7 @@ class CountPassword(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_by = db.Column(db.Integer, db.ForeignKey('envanter_users.id'))
     
     def __repr__(self):
         return f'<CountPassword {self.id}>'

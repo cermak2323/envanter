@@ -538,3 +538,21 @@ FROM users
 FROM (SELECT users.id AS users_id, users.username AS users_username, users.full_name AS users_full_name, users.real_name AS users_real_name, users.email AS users_email, users.password_hash AS users_password_hash, users.role AS users_role, users.job_title AS users_job_title, users.title AS users_title, users.work_position AS users_work_position, users.user_group AS users_user_group, users.user_role AS users_user_role, users.signature_path AS users_signature_path, users.profile_image_path AS users_profile_image_path, users.is_active_user AS users_is_active_user, users.can_mark_used AS users_can_mark_used, users.email_2fa_enabled AS users_email_2fa_enabled, users.email_2fa_code AS users_email_2fa_code, users.email_2fa_expires AS users_email_2fa_expires, users.email_2fa_attempts AS users_email_2fa_attempts, users.email_2fa_locked_until AS users_email_2fa_locked_until, users.tc_number AS users_tc_number, users.last_password_change AS users_last_password_change, users.force_password_change AS users_force_password_change, users.force_tutorial AS users_force_tutorial, users.first_login_completed AS users_first_login_completed, users.last_login AS users_last_login, users.terms_accepted AS users_terms_accepted, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
 FROM users) AS anon_1
 2025-10-30 15:17:41,990 - sqlalchemy.engine.Engine - INFO - [generated in 0.00116s] ()
+2025-10-30 15:20:47,424 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 15:20:47,431 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT users.id AS users_id, users.username AS users_username, users.password AS users_password, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.role AS users_role, users.created_at AS users_created_at 
+FROM users) AS anon_1
+2025-10-30 15:20:47,431 - sqlalchemy.engine.Engine - INFO - [generated in 0.00109s] ()
+2025-10-30 15:20:47,436 - sqlalchemy.engine.Engine - INFO - INSERT INTO users (username, password, password_hash, full_name, role, created_at) VALUES (?, ?, ?, ?, ?, ?)
+2025-10-30 15:20:47,437 - sqlalchemy.engine.Engine - INFO - [generated in 0.00085s] ('admin_test', None, 'ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae', 'Admin Test', 'admin', '2025-10-30 12:20:47.436786')
+2025-10-30 15:20:47,442 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-10-30 15:20:47,447 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 15:20:47,449 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.username AS users_username, users.password AS users_password, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.role AS users_role, users.created_at AS users_created_at 
+FROM users 
+WHERE users.id = ?
+2025-10-30 15:20:47,450 - sqlalchemy.engine.Engine - INFO - [generated in 0.00082s] (1,)
+2025-10-30 15:20:47,451 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT users.id AS users_id, users.username AS users_username, users.password AS users_password, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.role AS users_role, users.created_at AS users_created_at 
+FROM users) AS anon_1
+2025-10-30 15:20:47,452 - sqlalchemy.engine.Engine - INFO - [cached since 0.01995s ago] ()
+2025-10-30 15:20:47,455 - sqlalchemy.engine.Engine - INFO - ROLLBACK

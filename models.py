@@ -97,59 +97,22 @@ class ScannedQR(db.Model):
 
 class User(db.Model):
     """
-    Kullanıcılar - cermakservis PostgreSQL şemasıyla uyumlu
-    Birinci uygulama ile aynı tablo, tüm alanlar support ediliyor
+    Kullanıcılar - Production PostgreSQL şemasıyla eşleştirildi
+    
+    Production (cermakservis):
+    - id, username, password, password_hash, full_name, role, created_at
+    
+    Fazlası tabloda yok, eklemeyecek!
     """
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    
-    # Temel
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    full_name = db.Column(db.String(120))
-    real_name = db.Column(db.String(120))
-    email = db.Column(db.String(255))
-    password_hash = db.Column(db.String(255))
-    
-    # Rol ve Yetki
-    role = db.Column(db.String(20), default='user')  # admin, user
-    job_title = db.Column(db.String(120))
-    title = db.Column(db.String(120))
-    work_position = db.Column(db.String(120))
-    user_group = db.Column(db.String(120))
-    user_role = db.Column(db.String(120))
-    
-    # Dosyalar
-    signature_path = db.Column(db.String(500))
-    profile_image_path = db.Column(db.String(500))
-    
-    # Status
-    is_active_user = db.Column(db.Boolean, default=True)
-    can_mark_used = db.Column(db.Boolean, default=False)
-    
-    # 2FA
-    email_2fa_enabled = db.Column(db.Boolean, default=False)
-    email_2fa_code = db.Column(db.String(6))
-    email_2fa_expires = db.Column(db.DateTime)
-    email_2fa_attempts = db.Column(db.Integer, default=0)
-    email_2fa_locked_until = db.Column(db.DateTime)
-    
-    # Güvenlik
-    tc_number = db.Column(db.String(20))
-    last_password_change = db.Column(db.DateTime)
-    force_password_change = db.Column(db.Boolean, default=False)
-    force_tutorial = db.Column(db.Boolean, default=False)
-    
-    # Login
-    first_login_completed = db.Column(db.Boolean, default=False)
-    last_login = db.Column(db.DateTime)
-    
-    # Onaylar
-    terms_accepted = db.Column(db.Boolean, default=False)
-    
-    # Zaman
+    username = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password = db.Column(db.String(255))  # Backward compat - hali hazırda saklı
+    password_hash = db.Column(db.String(255), nullable=False)
+    full_name = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), default='user')  # admin, user
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __repr__(self):
         return f'<User {self.username}>'

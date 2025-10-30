@@ -520,3 +520,12 @@
 2025-10-30 13:26:18,703 - werkzeug - INFO -  * Restarting with stat
 2025-10-30 13:26:23,577 - werkzeug - WARNING -  * Debugger is active!
 2025-10-30 13:26:23,587 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-30 14:24:56,443 - werkzeug - INFO -  * Restarting with stat
+2025-10-30 14:25:01,432 - werkzeug - WARNING -  * Debugger is active!
+2025-10-30 14:25:01,448 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-30 14:25:24,266 - root - WARNING - B2 authorization attempt 1 failed, retrying: Invalid authorization token. Server said:  (bad_auth_token)
+2025-10-30 14:25:25,475 - root - WARNING - B2 authorization attempt 2 failed, retrying: Invalid authorization token. Server said:  (bad_auth_token)
+2025-10-30 14:25:27,675 - root - ERROR - B2 authorization failed after 3 attempts: Invalid authorization token. Server said:  (bad_auth_token)
+2025-10-30 14:25:27,675 - root - ERROR - Error deleting QR codes from B2: Invalid authorization token. Server said:  (bad_auth_token)
+2025-10-30 14:29:11,164 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-30 14:29:11,369 - werkzeug - INFO -  * Restarting with stat

@@ -1883,50 +1883,13 @@ def check_existing_qrs():
         'count': count
     })
 
-@app.route('/clear_all_qrs', methods=['POST'])
+@app.route('/qr_management', methods=['GET'])
 @login_required
-def clear_all_qrs():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Aktif sayım oturumu kontrolü
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = \'active\'")
-    active_session = cursor.fetchone()[0]
-    
-    if active_session > 0:
-        close_db(conn)
-        return jsonify({'error': 'Aktif bir sayım oturumu var. QR kodları silinemez.'}), 400
-    
-    try:
-        # Mevcut QR kodları için B2'den dosyaları sil
-        try:
-            b2_service = get_b2_service()
-            cursor.execute('SELECT qr_id FROM qr_codes')
-            existing_qr_codes = cursor.fetchall()
-            
-            for row in existing_qr_codes:
-                qr_id = row[0]
-                file_path = f'qr_codes/{qr_id}.png'
-                b2_service.delete_file(file_path)
-                logging.info(f"Deleted QR code from B2: {file_path}")
-                
-        except Exception as e:
-            logging.error(f"Error deleting QR codes from B2: {e}")
-        
-        # QR kodlarını ve parçaları sil
-        cursor.execute('DELETE FROM qr_codes')
-        cursor.execute('DELETE FROM parts')
-        
-        conn.commit()
-        close_db(conn)
-        
-        return jsonify({
-            'success': True,
-            'message': 'Tüm QR kodları başarıyla silindi'
-        })
-    except Exception as e:
-        close_db(conn)
-        return jsonify({'error': f'QR kodları silinirken hata: {str(e)}'}), 500
+def qr_management():
+    """QR Yönetim Paneli - Güvenli QR işlemleri"""
+    if not session.get('admin_authenticated'):
+        return redirect('/admin')
+    return render_template('qr_management.html')
 
 @app.route('/get_reports')
 @login_required

@@ -8,7 +8,9 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 import datetime
 
-DATABASE_URL = "postgresql://cermak_user:XPNP4Yt8dsWdKaaxNlQOzIiRJjWoTrfC@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak?sslmode=require"
+import os
+DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('RENDER_INTERNAL_DATABASE_URL') or \
+    "postgresql://cermak_envanter_user:N22HyFcRf3bvgMzkK1J5yNYgrXEfIgNC@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter?sslmode=require"
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -148,17 +150,17 @@ with app.app_context():
         
         print("# 1. PostgreSQL Dump Al (Production'dan)")
         print("""
-pg_dump postgresql://cermak_user:PASSWORD@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak > cermak_backup.sql
+    pg_dump postgresql://<DB_USER>:<DB_PASSWORD>@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter > cermak_backup.sql
 """)
         
         print("\n# 2. Specific Users'ı Al")
         print("""
-psql postgresql://cermak_user:PASSWORD@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak -c "\\copy (SELECT * FROM users) TO users_full_backup.csv WITH CSV HEADER"
+    psql postgresql://<DB_USER>:<DB_PASSWORD>@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter -c "\\copy (SELECT * FROM users) TO users_full_backup.csv WITH CSV HEADER"
 """)
         
         print("\n# 3. Restore Öncesi Kontrol")
         print("""
-psql postgresql://cermak_user:PASSWORD@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak -c "SELECT * FROM users"
+    psql postgresql://<DB_USER>:<DB_PASSWORD>@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter -c "SELECT * FROM users"
 """)
         
         print("\n" + "=" * 120)

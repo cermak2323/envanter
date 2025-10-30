@@ -1,7 +1,8 @@
 # 📱 RENDER.COM DEPLOY REHBERİ
 
 ## 🎯 Hazırlık Kontrol Listesi
-- ✅ PostgreSQL veritabanı hazır (dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com)
+- ✅ PostgreSQL veritabanı hazır (dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com)  
+	(Use Render internal DB or set DATABASE_URL env var with credentials)
 - ✅ Uygulama yerel olarak çalışıyor
 - ✅ QR kod tarama test edildi
 - ✅ Admin paneli çalışıyor
@@ -32,7 +33,9 @@ Start Command: python app.py
 
 ### 4. Environment Variables Ekleme
 ```
-DATABASE_URL = postgresql://cermak_user:XPNP4Yt8dsWdKaaxNlQOzIiRJjWoTrfC@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak?sslmode=require
+# IMPORTANT: Do NOT hardcode credentials in the repo. Set this as an environment variable in Render.
+# Example (use Render dashboard to set, or use the internal DB URL):
+DATABASE_URL = postgresql://<DB_USER>:<DB_PASSWORD>@dpg-d41mgsje5dus73df6o40-a:5432/cermak_envanter?sslmode=require
 
 RENDER = true
 

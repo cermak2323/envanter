@@ -602,3 +602,54 @@ WHERE envanter_users.username = ?
  LIMIT ? OFFSET ?
 2025-10-30 15:46:50,207 - sqlalchemy.engine.Engine - INFO - [cached since 0.02811s ago] ('test1', 1, 0)
 2025-10-30 15:46:50,207 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-30 17:16:50,858 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-30 17:17:07,020 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-30 17:17:25,540 - root - ERROR - DSN validation failed: Port could not be cast to integer value as 'port'
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("part_codes")
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,482 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("qr_codes")
+2025-10-30 17:25:18,489 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,490 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("count_sessions")
+2025-10-30 17:25:18,490 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,492 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("scanned_qr")
+2025-10-30 17:25:18,493 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,493 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("envanter_users")
+2025-10-30 17:25:18,493 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,495 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("count_passwords")
+2025-10-30 17:25:18,496 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:18,496 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-10-30 17:25:18,510 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 17:25:18,516 - sqlalchemy.engine.Engine - INFO - SELECT envanter_users.id AS envanter_users_id, envanter_users.username AS envanter_users_username, envanter_users.password AS envanter_users_password, envanter_users.password_hash AS envanter_users_password_hash, envanter_users.full_name AS envanter_users_full_name, envanter_users.role AS envanter_users_role, envanter_users.created_at AS envanter_users_created_at, envanter_users.real_name AS envanter_users_real_name, envanter_users.email AS envanter_users_email, envanter_users.job_title AS envanter_users_job_title, envanter_users.title AS envanter_users_title, envanter_users.work_position AS envanter_users_work_position, envanter_users.user_group AS envanter_users_user_group, envanter_users.user_role AS envanter_users_user_role, envanter_users.signature_path AS envanter_users_signature_path, envanter_users.profile_image_path AS envanter_users_profile_image_path, envanter_users.is_active_user AS envanter_users_is_active_user, envanter_users.can_mark_used AS envanter_users_can_mark_used, envanter_users.email_2fa_enabled AS envanter_users_email_2fa_enabled, envanter_users.email_2fa_code AS envanter_users_email_2fa_code, envanter_users.email_2fa_expires AS envanter_users_email_2fa_expires, envanter_users.email_2fa_attempts AS envanter_users_email_2fa_attempts, envanter_users.email_2fa_locked_until AS envanter_users_email_2fa_locked_until, envanter_users.tc_number AS envanter_users_tc_number, envanter_users.last_password_change AS envanter_users_last_password_change, envanter_users.force_password_change AS envanter_users_force_password_change, envanter_users.force_tutorial AS envanter_users_force_tutorial, envanter_users.first_login_completed AS envanter_users_first_login_completed, envanter_users.last_login AS envanter_users_last_login, envanter_users.terms_accepted AS envanter_users_terms_accepted, envanter_users.updated_at AS envanter_users_updated_at 
+FROM envanter_users 
+WHERE envanter_users.username = ?
+ LIMIT ? OFFSET ?
+2025-10-30 17:25:18,517 - sqlalchemy.engine.Engine - INFO - [generated in 0.00122s] ('admin', 1, 0)
+2025-10-30 17:25:18,522 - sqlalchemy.engine.Engine - INFO - INSERT INTO envanter_users (username, password, password_hash, full_name, role, created_at, real_name, email, job_title, title, work_position, user_group, user_role, signature_path, profile_image_path, is_active_user, can_mark_used, email_2fa_enabled, email_2fa_code, email_2fa_expires, email_2fa_attempts, email_2fa_locked_until, tc_number, last_password_change, force_password_change, force_tutorial, first_login_completed, last_login, terms_accepted, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2025-10-30 17:25:18,523 - sqlalchemy.engine.Engine - INFO - [generated in 0.00121s] ('admin', None, '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Administrator', 'admin', '2025-10-30 14:25:18.522849', None, None, None, None, None, None, None, None, None, 1, 0, 0, None, None, 0, None, None, None, 0, 0, 0, None, 0, '2025-10-30 14:25:18.522849')
+2025-10-30 17:25:18,526 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-10-30 17:25:18,530 - werkzeug - INFO -  * Restarting with stat
+2025-10-30 17:25:24,724 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 17:25:24,724 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-30 17:25:24,724 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,724 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-30 17:25:24,724 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 17:25:24,729 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("part_codes")
+2025-10-30 17:25:24,730 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,731 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("qr_codes")
+2025-10-30 17:25:24,731 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,734 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("count_sessions")
+2025-10-30 17:25:24,734 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,736 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("scanned_qr")
+2025-10-30 17:25:24,736 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,737 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("envanter_users")
+2025-10-30 17:25:24,738 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,738 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("count_passwords")
+2025-10-30 17:25:24,739 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-30 17:25:24,740 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-10-30 17:25:24,755 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-30 17:25:24,757 - sqlalchemy.engine.Engine - INFO - ROLLBACK

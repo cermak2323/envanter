@@ -260,8 +260,10 @@ else:
     _db_url = _raw_db_url
 
 
-# Hardcoded DATABASE_URL for immediate testing
-DATABASE_URL = "postgresql://cermak_user:XPNP4Yt8dsWdKaaxNlQOzIiRJjWoTrfC@dpg-d2m6l5ripnbc738v4b0g-a.oregon-postgres.render.com:5432/cermak?sslmode=require"
+# Prefer environment-provided DB URLs; fall back to the new cermak_envanter database
+# Note: for security, set the full DATABASE_URL or RENDER_INTERNAL_DATABASE_URL in the environment
+DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('RENDER_INTERNAL_DATABASE_URL') or \
+    "postgresql://cermak_envanter_user:N22HyFcRf3bvgMzkK1J5yNYgrXEfIgNC@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter?sslmode=require"
 
 # Debug: Print the DATABASE_URL from environment
 print(f"DEBUG: Environment DATABASE_URL = {os.environ.get('DATABASE_URL')}")

@@ -804,6 +804,14 @@
                         <i class="bi bi-camera-video-off"></i>
                         Kamerayı Durdur
                     </button>
+                    <button class="btn-scanner btn-warning" onclick="showManualInput()">
+                        <i class="bi bi-keyboard"></i>
+                        Manuel Giriş
+                    </button>
+                    <button class="btn-scanner btn-info" onclick="testQRScan()">
+                        <i class="bi bi-bug"></i>
+                        Test QR
+                    </button>
                 </div>
             </div>
 
@@ -991,11 +999,26 @@
 
         // WebSocket Bağlantıları
         socket.on('connect', function() {
-            console.log('WebSocket bağlandı');
+            console.log('✅ WebSocket bağlandı');
             loadSessionStats();
+            
+            // Bağlantı durumunu kullanıcıya göster
+            addScanMessage({
+                success: true,
+                message: 'WebSocket bağlantısı kuruldu ✅'
+            });
+        });
+
+        socket.on('disconnect', function() {
+            console.log('❌ WebSocket bağlantısı kesildi');
+            addScanMessage({
+                success: false,
+                message: 'WebSocket bağlantısı kesildi ❌'
+            });
         });
 
         socket.on('scan_result', function(data) {
+            console.log('📨 scan_result alındı:', data);
             addScanMessage(data);
             if (data.success) {
                 updateStats(data);
@@ -1704,6 +1727,7 @@
         function showManualInput() {
             const qrCode = prompt('QR Kod değerini girin:');
             if (qrCode && qrCode.trim()) {
+                console.log('📱 Manuel QR giriş:', qrCode.trim());
                 // QR kod tarama simülasyonu
                 socket.emit('scan_qr', {qr_id: qrCode.trim()});
                 
@@ -1714,6 +1738,44 @@
             }
         }
 
+        // Test QR fonksiyonu - debug için
+        function testQRScan() {
+            console.log('🧪 Test QR çalıştırılıyor...');
+            
+            // Test QR kodları
+            const testQRs = ['TEST-001', 'TEST-002', 'TEST-003'];
+            const randomQR = testQRs[Math.floor(Math.random() * testQRs.length)];
+            
+            console.log('📡 WebSocket bağlantısı durumu:', socket.connected);
+            console.log('🔑 Session durumu:', {
+                count_access: !!sessionStorage.getItem('count_access')
+            });
+            
+            if (!socket.connected) {
+                addScanMessage({
+                    success: false,
+                    message: '❌ WebSocket bağlantısı yok! Sayfayı yenileyin.'
+                });
+                return;
+            }
+            
+            addScanMessage({
+                success: true,
+                message: `🧪 Test QR gönderiliyor: ${randomQR}`
+            });
+            
+            // Test QR'ını gönder
+            socket.emit('scan_qr', {qr_id: randomQR});
+            
+            // 5 saniye sonra timeout kontrolü
+            setTimeout(() => {
+                addScanMessage({
+                    success: false,
+                    message: '⏰ Test QR için 5 saniye geçti, yanıt gelmedi'
+                });
+            }, 5000);
+        }
+
         // Sayfa yüklendiğinde tüm fonksiyonları global scope'a ekle
         function initializeGlobalFunctions() {
             window.goToMain = goToMain;
@@ -1721,8 +1783,10 @@
             window.logout = logout;
             window.finishCount = finishCount;
             window.startCamera = startCamera;
+            window.stopCamera = stopCamera;
             window.showManualInput = showManualInput;
-            console.log('Fonksiyonlar global scope\'a eklendi');
+            window.testQRScan = testQRScan;
+            console.log('✅ Tüm fonksiyonlar global scope\'a eklendi');
         }
         
         // Hemen çalıştır

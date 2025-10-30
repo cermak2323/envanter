@@ -103,10 +103,13 @@ CREATE TABLE count_passwords (
     id SERIAL PRIMARY KEY,
     session_id VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(8) NOT NULL,
+    created_by INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_used INTEGER DEFAULT 0,
     CONSTRAINT fk_password_session
-        FOREIGN KEY (session_id) REFERENCES count_sessions(session_id)
+        FOREIGN KEY (session_id) REFERENCES count_sessions(session_id),
+    CONSTRAINT fk_password_created_by
+        FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- Create indexes for better performance

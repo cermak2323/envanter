@@ -357,7 +357,8 @@ def generate_strong_password():
     return ''.join(password)
 
 # Admin sayım şifresi
-ADMIN_COUNT_PASSWORD = os.environ.get('ADMIN_COUNT_PASSWORD', generate_strong_password())
+ADMIN_COUNT_PASSWORD = "admin123"
+print(f"DEBUG: ADMIN_COUNT_PASSWORD = '{ADMIN_COUNT_PASSWORD}'")  # DEBUG
 
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
@@ -712,6 +713,83 @@ def check_auth():
         })
     return jsonify({'authenticated': False})
 
+@app.route('/create_test_data', methods=['POST'])
+@login_required
+def create_test_data():
+    """Test verisi oluştur - sadece development için"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Test parçaları ekle
+        test_parts = [
+            ('TEST-001', 'Test Parça 1', 5),
+            ('TEST-002', 'Test Parça 2', 3),
+            ('TEST-003', 'Test Parça 3', 2)
+        ]
+        
+        # Mevcut test verilerini sil
+        cursor.execute("DELETE FROM qr_codes WHERE qr_id LIKE 'TEST-%'")
+        cursor.execute("DELETE FROM parts WHERE part_code LIKE 'TEST-%'")
+        
+        # Test parçalarını ekle
+        for part_code, part_name, quantity in test_parts:
+            # Part'ı ekle
+            cursor.execute('INSERT INTO parts (part_code, part_name, quantity) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING',
+                         (part_code, part_name, quantity))
+            
+            # QR kodları oluştur
+            for i in range(quantity):
+                qr_id = f"{part_code}-{i+1:03d}"
+                cursor.execute('INSERT INTO qr_codes (qr_id, part_code, part_name) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING',
+                             (qr_id, part_code, part_name))
+        
+        conn.commit()
+        close_db(conn)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Test verileri oluşturuldu',
+            'test_qr_codes': [f"{part_code}-{i+1:03d}" for part_code, _, quantity in test_parts for i in range(quantity)]
+        })
+        
+    except Exception as e:
+        try:
+            conn.rollback()
+            close_db(conn)
+        except:
+            pass
+        return jsonify({'error': f'Test verisi oluşturulamadı: {str(e)}'}), 500
+
+@app.route('/debug/qr_codes')
+def debug_qr_codes():
+    """Debug: Mevcut QR kodlarını listele"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes ORDER BY qr_id LIMIT 20')
+        qr_codes = cursor.fetchall()
+        
+        close_db(conn)
+        
+        result = []
+        for row in qr_codes:
+            result.append({
+                'qr_id': row[0],
+                'part_code': row[1], 
+                'part_name': row[2],
+                'is_used': row[3]
+            })
+        
+        return jsonify({
+            'total_qr_codes': len(result),
+            'qr_codes': result
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Hata: {str(e)}'}), 500
+
 @app.route('/upload_parts', methods=['POST'])
 @login_required
 def upload_parts():
@@ -1039,8 +1117,9 @@ def download_single_qr(qr_id):
         
         return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
 
-# Admin password: prefer ADMIN_PASSWORD env var, fall back to ADMIN_COUNT_PASSWORD for backwards compatibility
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or os.environ.get('ADMIN_COUNT_PASSWORD', "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J")
+# Admin password: set to admin123 for development
+ADMIN_PASSWORD = "admin123"
+print(f"DEBUG: ADMIN_PASSWORD = '{ADMIN_PASSWORD}'")  # DEBUG
 
 @app.route('/admin')
 def admin_login():
@@ -1051,7 +1130,14 @@ def admin_login():
     # POST request ise şifre kontrolü yap
     if request.method == 'POST':
         password = request.form.get('admin_password')
-        if password == ADMIN_PASSWORD:
+        print(f"DEBUG: Admin login (GET/POST) - received password: '{password}'")  # DEBUG
+        print(f"DEBUG: Admin login (GET/POST) - expected password: '{ADMIN_PASSWORD}'")  # DEBUG
+        
+        # Türkçe karakter desteği için case-insensitive karşılaştırma
+        password_lower = password.lower().replace('ı', 'i').replace('İ', 'i').replace('I', 'i') if password else ''
+        expected_lower = ADMIN_PASSWORD.lower()
+        
+        if password_lower == expected_lower:
             session['admin_authenticated'] = True
             return redirect('/admin')
         else:
@@ -1063,7 +1149,18 @@ def admin_login():
 @app.route('/admin', methods=['POST'])
 def admin_login_post():
     password = request.form.get('admin_password')
-    if password == ADMIN_PASSWORD:
+    print(f"DEBUG: Admin login attempt - received password: '{password}'")  # DEBUG
+    print(f"DEBUG: Admin login attempt - expected password: '{ADMIN_PASSWORD}'")  # DEBUG
+    
+    # Türkçe karakter desteği için case-insensitive karşılaştırma
+    password_lower = password.lower().replace('ı', 'i').replace('İ', 'i').replace('I', 'i') if password else ''
+    expected_lower = ADMIN_PASSWORD.lower()
+    
+    print(f"DEBUG: Admin login normalized - received: '{password_lower}'")  # DEBUG
+    print(f"DEBUG: Admin login normalized - expected: '{expected_lower}'")  # DEBUG
+    print(f"DEBUG: Admin login passwords match: {password_lower == expected_lower}")  # DEBUG
+    
+    if password_lower == expected_lower:
         session['admin_authenticated'] = True
         return redirect('/admin')
     else:
@@ -1505,65 +1602,103 @@ def get_recent_activities():
 
 @socketio.on('scan_qr')
 def handle_scan(data):
-    # Sayım erişim kontrolü
-    if not session.get('count_access'):
-        emit('scan_result', {'success': False, 'message': 'Sayım erişimi için şifre gerekli'})
-        return
+    print(f"DEBUG: handle_scan çağrıldı, data: {data}")  # DEBUG
+    print(f"DEBUG: session keys: {list(session.keys())}")  # DEBUG
+    print(f"DEBUG: count_access: {session.get('count_access')}")  # DEBUG
     
-    qr_id = data.get('qr_id')
-    
+    # Sayım erişim kontrolü - önce aktif sayım olup olmadığını kontrol et
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    # Aktif sayım oturumu kontrolü
+    cursor.execute("SELECT session_id FROM count_sessions WHERE status = 'active' LIMIT 1")
     session_result = cursor.fetchone()
     
     if not session_result:
         emit('scan_result', {'success': False, 'message': 'Aktif sayım oturumu bulunamadı'})
         close_db(conn)
+        print("DEBUG: Aktif sayım oturumu bulunamadı")
         return
     
     session_id = session_result[0]
+    print(f"DEBUG: Aktif session_id: {session_id}")
     
-    cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes WHERE qr_id = %s', (qr_id,))
+    # Sayım erişim kontrolü - sadece aktif sayım varsa kontrol et
+    if not session.get('count_access'):
+        emit('scan_result', {'success': False, 'message': 'Sayım erişimi için şifre gerekli'})
+        close_db(conn)
+        print("DEBUG: count_access yok")
+        return
+    
+    qr_id = data.get('qr_id')
+    if not qr_id:
+        emit('scan_result', {'success': False, 'message': 'QR kod verisi eksik'})
+        close_db(conn)
+        print("DEBUG: QR kod verisi eksik")
+        return
+    
+    print(f"DEBUG: QR kod okutuldu: {qr_id}")
+    
+    # QR kod kontrolü - hem tam QR ID hem de part code ile ara
+    cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes WHERE qr_id = %s OR part_code = %s', (qr_id, qr_id))
     qr_result = cursor.fetchone()
     
     if not qr_result:
-        emit('scan_result', {'success': False, 'message': 'QR kod bulunamadı'})
+        emit('scan_result', {'success': False, 'message': f'QR kod bulunamadı: {qr_id}'})
         close_db(conn)
+        print(f"DEBUG: QR kod bulunamadı: {qr_id}")
         return
     
     if qr_result[3] == 1:
         emit('scan_result', {'success': False, 'message': 'Bu QR kod daha önce kullanıldı'})
         close_db(conn)
+        print(f"DEBUG: QR kod zaten kullanılmış: {qr_id}")
         return
     
+    # Bulunan QR kodun gerçek bilgilerini al
+    actual_qr_id = qr_result[0]  # Gerçek QR ID
     part_code = qr_result[1]
     part_name = qr_result[2]
     
-    cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = %s WHERE qr_id = %s',
-                 (datetime.now(), qr_id))
+    print(f"DEBUG: Bulunan QR - ID: {actual_qr_id}, Part: {part_code}, Name: {part_name}")
     
-    cursor.execute('INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by) VALUES (%s, %s, %s, %s)',
-                 (session_id, qr_id, part_code, session['user_id']))
-    
-    conn.commit()
-    
-    # Kullanıcı bilgisini al
-    cursor.execute('SELECT full_name FROM users WHERE id = %s', (session['user_id'],))
-    user_result = cursor.fetchone()
-    user_name = user_result[0] if user_result else 'Bilinmeyen Kullanıcı'
-    
-    close_db(conn)
-    
-    emit('scan_result', {
-        'success': True,
-        'message': f'{part_name} ({part_code}) sayıldı',
-        'part_code': part_code,
-        'part_name': part_name,
-        'scanned_by': user_name,
-        'scanned_at': datetime.now().strftime('%H:%M')
-    }, broadcast=True)
+    try:
+        # QR kodu kullanıldı olarak işaretle - gerçek QR ID kullan
+        cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = %s WHERE qr_id = %s',
+                     (datetime.now(), actual_qr_id))
+        
+        # Sayım kaydı ekle - gerçek QR ID kullan
+        cursor.execute('INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by) VALUES (%s, %s, %s, %s)',
+                     (session_id, actual_qr_id, part_code, session.get('user_id')))
+        
+        conn.commit()
+        print(f"DEBUG: QR kod başarıyla işlendi: {qr_id}")
+        
+        # Kullanıcı bilgisini al
+        cursor.execute('SELECT full_name FROM users WHERE id = %s', (session.get('user_id'),))
+        user_result = cursor.fetchone()
+        user_name = user_result[0] if user_result else 'Bilinmeyen Kullanıcı'
+        
+        close_db(conn)
+        
+        emit('scan_result', {
+            'success': True,
+            'message': f'{part_name} ({part_code}) sayıldı',
+            'qr_code': actual_qr_id,
+            'part_code': part_code,
+            'part_name': part_name,
+            'scanned_by': user_name,
+            'scanned_at': datetime.now().strftime('%H:%M')
+        })
+        
+        print(f"DEBUG: scan_result emit edildi: success=True")
+        
+    except Exception as e:
+        conn.rollback()
+        close_db(conn)
+        print(f"DEBUG: Veritabanı hatası: {e}")
+        emit('scan_result', {'success': False, 'message': f'Veritabanı hatası: {str(e)}'})
+        return
 
 @app.route('/finish_count', methods=['POST'])
 def finish_count():
@@ -1689,12 +1824,12 @@ def stop_all_counts():
             close_db(conn)
             return jsonify({'success': True, 'message': 'Durdurulacak aktif sayım bulunamadı'})
         
-        # Tüm aktif sayımları "stopped" olarak işaretle
+        # Tüm aktif sayımları "completed" olarak işaretle
         stopped_count = 0
         for session_tuple in active_sessions:
             session_id = session_tuple[0]
-            cursor.execute('UPDATE count_sessions SET status = "stopped", finished_at = %s WHERE session_id = %s',
-                         (datetime.now(), session_id))
+            cursor.execute('UPDATE count_sessions SET status = %s, finished_at = %s WHERE session_id = %s',
+                         ('completed', datetime.now(), session_id))
             stopped_count += 1
         
         # Session'ları temizle
@@ -1709,7 +1844,7 @@ def stop_all_counts():
         socketio.emit('all_counts_stopped', {
             'message': f'{stopped_count} aktif sayım durduruldu',
             'stopped_sessions': [s[0] for s in active_sessions]
-        }, broadcast=True)
+        })
         
         return jsonify({
             'success': True,
@@ -1869,7 +2004,18 @@ def verify_admin_count_password():
         data = request.get_json()
         password = data.get('password', '')
         
-        if password == ADMIN_COUNT_PASSWORD:
+        print(f"DEBUG: Admin count password attempt - received: '{password}'")  # DEBUG
+        print(f"DEBUG: Admin count password attempt - expected: '{ADMIN_COUNT_PASSWORD}'")  # DEBUG
+        
+        # Türkçe karakter desteği için case-insensitive karşılaştırma
+        password_lower = password.lower().replace('ı', 'i').replace('İ', 'i').replace('I', 'i')
+        expected_lower = ADMIN_COUNT_PASSWORD.lower()
+        
+        print(f"DEBUG: Admin count password normalized - received: '{password_lower}'")  # DEBUG
+        print(f"DEBUG: Admin count password normalized - expected: '{expected_lower}'")  # DEBUG
+        print(f"DEBUG: Admin count password match: {password_lower == expected_lower}")  # DEBUG
+        
+        if password_lower == expected_lower:
             session['count_access'] = True
             return jsonify({'success': True})
         else:
@@ -2097,11 +2243,11 @@ if __name__ == '__main__':
         socketio.run(app, host='0.0.0.0', port=port, debug=False)
     else:
         print("�🚀 Starting EnvanterQR System v2.0...")
-        print("📊 Dashboard: http://localhost:5001")
-        print("🔐 Admin Panel: http://localhost:5001/admin")
-        print("🏥 Health Check: http://localhost:5001/health")
-        print("📈 Metrics: http://localhost:5001/metrics")
+        print("📊 Dashboard: http://localhost:5002")
+        print("🔐 Admin Panel: http://localhost:5002/admin")
+        print("🏥 Health Check: http://localhost:5002/health")
+        print("📈 Metrics: http://localhost:5002/metrics")
         print("☁️ Storage: Backblaze B2 Enabled")
         print("🔒 Security: Headers + Rate Limiting Active")
         print()
-        socketio.run(app, host='localhost', port=5001, debug=True)
+        socketio.run(app, host='localhost', port=5002, debug=True)

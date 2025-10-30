@@ -4,20 +4,95 @@ QR Kod Yönetim Paneli - Admin İşlemleri
 - QR kodları listele
 - CSV import (mevcut QR'ları korur, sadece yenileri ekler)
 - PDF export
+
+Lokal: QR geçici depola (static/qrcodes/)
+Production: QR B2 Storage'da depola (kalıcı)
 """
 
 import uuid
 import csv
+import os
 from io import StringIO, BytesIO
+from pathlib import Path
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, send_file
-from werkzeug.utils import secure_filename
+from flask import Blueprint, request, jsonify, send_file
+import qrcode
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 
-from models import db, PartCode, QRCode, CountSession
-from b2_storage import upload_qr_to_b2, generate_qr_code_image
+from models import db, PartCode, QRCode
 
 
 qr_admin_bp = Blueprint('qr_admin', __name__, url_prefix='/admin/qr')
+
+
+def generate_qr_image(data):
+    """QR kod resmi oluştur (PIL Image)"""
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    return img
+
+
+def save_qr_code(qr_id, qr_image):
+    """
+    QR kodu kaydet - lokal veya B2'ye göre
+    
+    Lokal (Development):
+        - static/qrcodes/ klasörine PNG olarak kaydet
+        - URL: /static/qrcodes/{qr_id}.png
+    
+    Production (Render.com):
+        - B2 Storage'a yükle
+        - URL: Kalıcı B2 bağlantısı
+    """
+    is_production = bool(os.environ.get('RENDER'))
+    
+    if is_production:
+        # Production: B2 Storage'a yükle
+        try:
+            from b2_storage import upload_qr_to_b2
+            
+            # BytesIO'ya kaydet
+            img_bytes = BytesIO()
+            qr_image.save(img_bytes, format='PNG')
+            img_bytes.seek(0)
+            
+            blob_url, file_id = upload_qr_to_b2(
+                img_bytes,
+                f"qr-permanent/{qr_id}.png",
+                file_name=f"{qr_id}.png"
+            )
+            print(f"☁️ QR B2'ye yüklendi: {blob_url[:50]}...")
+            return blob_url, file_id
+        except Exception as e:
+            print(f"⚠️ B2 upload hatası: {e} - Lokal fallback")
+            # Fallback: Lokal kaydet
+            blob_url = f"/static/qrcodes/{qr_id}.png"
+            qr_folder = Path('static/qrcodes')
+            qr_folder.mkdir(parents=True, exist_ok=True)
+            qr_image.save(qr_folder / f'{qr_id}.png')
+            return blob_url, None
+    else:
+        # Development: Geçici olarak lokal kaydet
+        qr_folder = Path('static/qrcodes')
+        qr_folder.mkdir(parents=True, exist_ok=True)
+        
+        qr_path = qr_folder / f'{qr_id}.png'
+        qr_image.save(qr_path)
+        
+        blob_url = f"/static/qrcodes/{qr_id}.png"
+        print(f"💾 QR lokal kaydedildi: {qr_path}")
+        return blob_url, None
 
 
 @qr_admin_bp.route('/generate', methods=['GET', 'POST'])
@@ -38,20 +113,16 @@ def generate_qr():
                 part = PartCode(part_code=part_code, part_name=part_name)
                 db.session.add(part)
                 db.session.commit()
-                print(f"✅ Yeni part code oluşturuldu: {part_code}")
+                print(f"✨ Yeni part code oluşturuldu: {part_code}")
             
             # Yeni QR kod oluştur
             qr_id = f"{part_code}-{str(uuid.uuid4())[:8]}"
             
             # QR resmi oluştur
-            qr_image = generate_qr_code_image(qr_id)
+            qr_image = generate_qr_image(qr_id)
             
-            # B2'ye yükle (kalıcı URL)
-            blob_url, file_id = upload_qr_to_b2(
-                qr_image, 
-                f"qr-permanent/{qr_id}.png",
-                file_name=f"{qr_id}.png"
-            )
+            # Kaydet (lokal veya B2'ye)
+            blob_url, file_id = save_qr_code(qr_id, qr_image)
             
             # Veritabanına ekle
             qr_code = QRCode(
@@ -63,11 +134,11 @@ def generate_qr():
             db.session.add(qr_code)
             db.session.commit()
             
-            print(f"✅ QR kod oluşturuldu: {qr_id} -> {blob_url[:50]}...")
+            print(f"✅ QR kod oluşturuldu: {qr_id}")
             
             return jsonify({
                 'success': True,
-                'message': f'QR kod başarıyla oluşturuldu',
+                'message': 'QR kod başarıyla oluşturuldu',
                 'qr_id': qr_id,
                 'part_code': part_code,
                 'part_name': part_name,
@@ -78,8 +149,6 @@ def generate_qr():
             db.session.rollback()
             print(f"❌ QR oluşturma hatası: {str(e)}")
             return jsonify({'success': False, 'message': str(e)}), 500
-    
-    return render_template('admin_qr_generate.html')
 
 
 @qr_admin_bp.route('/list', methods=['GET'])
@@ -106,7 +175,7 @@ def list_qrcodes():
                 'is_used': qr.is_used,
                 'used_count': qr.used_count,
                 'blob_url': qr.blob_url,
-                'created_at': qr.created_at.isoformat(),
+                'created_at': qr.created_at.isoformat() if qr.created_at else None,
                 'first_used_at': qr.first_used_at.isoformat() if qr.first_used_at else None
             })
         
@@ -188,12 +257,6 @@ def import_csv():
 def export_pdf():
     """Tüm QR kodları PDF olarak indir"""
     try:
-        from reportlab.lib.pagesizes import letter, A4
-        from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Image, Table, TableStyle, Paragraph, PageBreak
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER
-        
         # QR kodları çek
         qr_codes = QRCode.query.join(PartCode).all()
         

@@ -100,9 +100,16 @@ if IS_PRODUCTION:
         print("📖 See RENDER_ENV_SETUP.md for instructions")
     
 else:
-    # LOCAL: SQLite + Local Storage (GEÇİCİ)
-    print("🏠 Local Mode: SQLite + Local Storage (GEÇİCİ)")
-    USE_B2_STORAGE = False
+    # LOCAL Mode - B2'yi enable edebiliriz environment variable ile
+    FORCE_B2_LOCAL = os.environ.get('FORCE_B2_LOCAL', 'false').lower() == 'true'
+    
+    if FORCE_B2_LOCAL:
+        print("🏠 Local Mode: SQLite + B2 Storage (DENEME) - FORCED B2")
+        USE_B2_STORAGE = True
+    else:
+        print("🏠 Local Mode: SQLite + Local Storage (GEÇİCİ)")
+        USE_B2_STORAGE = False
+    
     USE_POSTGRESQL = False
     
     # db_config.py kullan
@@ -113,7 +120,27 @@ else:
 print(f"💾 Database: {'PostgreSQL' if USE_POSTGRESQL else 'SQLite'}")
 print(f"📁 Storage: {'B2 Cloud' if USE_B2_STORAGE else 'Local Files'}")
 print(f"🔄 Data: {'KALICI' if IS_PRODUCTION else 'GEÇİCİ'}")
-print("="*60)
+
+# B2 durumu bilgisi
+if USE_B2_STORAGE:
+    print("\n" + "="*60)
+    print("☁️  B2 CLOUD STORAGE ENABLED")
+    print("="*60)
+    print("📌 QR kodları B2'ye kaydedilecek (KALICI)")
+    print("📌 Yeni QR'lar oluşturulduğunda otomatik yüklenir")
+    print("📌 Download işlemlerinde B2'den indirilir")
+    print("📌 Setup: B2_INTEGRATION_GUIDE.md dosyasını okuyun")
+    print("="*60)
+else:
+    print("\n" + "="*60)
+    print("💾 LOCAL STORAGE MODE")
+    print("="*60)
+    print("📌 QR kodları lokal depolama'ya kaydedilecek (GEÇİCİ)")
+    print("📌 B2 enable etmek için: FORCE_B2_LOCAL=true")
+    print("📌 Setup: B2_INTEGRATION_GUIDE.md dosyasını okuyun")
+    print("="*60)
+
+print()
 
 # SQLAlchemy'yi app'e bağla
 db.init_app(app)
@@ -1200,6 +1227,62 @@ def mark_qr_used():
         
     except Exception as e:
         return jsonify({'error': f'Hata: {str(e)}'}), 500
+
+@app.route('/clear_all_qrs', methods=['POST'])
+@login_required
+def clear_all_qrs():
+    """Tüm QR kodlarını temizle (aktif sayım oturumu yoksa)"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Aktif sayım oturumu kontrolü
+    cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = %s', ('active',))
+    active_session = cursor.fetchone()[0]
+    
+    if active_session > 0:
+        close_db(conn)
+        return jsonify({'error': 'Aktif bir sayım oturumu var. QR kodları silinemez.'}), 400
+    
+    try:
+        # B2 depolama kullanılıyorsa, dosyaları da sil
+        if USE_B2_STORAGE and get_b2_service:
+            b2_service = get_b2_service()
+            # B2'deki tüm QR dosyalarını sil
+            files = b2_service.list_files('qr_codes/')
+            for file_info in files:
+                try:
+                    b2_service.delete_file(file_info['name'])
+                except Exception as e:
+                    logging.error(f"B2'den {file_info['name']} silinirken hata: {e}")
+        
+        # Local depolama kullanılıyorsa, klasörü temizle
+        if not USE_B2_STORAGE:
+            qr_dir = os.path.join('static', 'qrcodes')
+            if os.path.exists(qr_dir):
+                for file in os.listdir(qr_dir):
+                    try:
+                        os.remove(os.path.join(qr_dir, file))
+                    except Exception as e:
+                        logging.error(f"Lokal dosya {file} silinirken hata: {e}")
+        
+        # QR kodlarını ve parçaları sil
+        cursor.execute('DELETE FROM qr_codes')
+        cursor.execute('DELETE FROM parts')
+        
+        conn.commit()
+        close_db(conn)
+        
+        # Cache'i temizle
+        cache_clear_pattern('qr_image_*')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tüm QR kodları başarıyla silindi'
+        })
+    except Exception as e:
+        close_db(conn)
+        logging.error(f"QR kodları silinirken hata: {e}")
+        return jsonify({'error': f'QR kodları silinirken hata: {str(e)}'}), 500
 
 @app.route('/generate_qr_image/<qr_id>')
 @login_required
@@ -2495,127 +2578,3 @@ if __name__ == '__main__':
         print()
         socketio.run(app, host='127.0.0.1', port=5002, debug=True)
 
-# ===== MIGRATION ENDPOINTS =====
-@app.route('/migrate/update_admin_password')
-def migrate_update_admin_password():
-    """Production migration: Update admin password to use Werkzeug hashing"""
-    try:
-        from werkzeug.security import generate_password_hash
-        
-        if USE_POSTGRESQL:
-            # First, create missing columns if they don't exist
-            try:
-                with db.engine.connect() as conn:
-                    # Add missing columns to envanter_users table
-                    missing_columns = [
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS real_name VARCHAR(255);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email VARCHAR(255);", 
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS job_title VARCHAR(120);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS title VARCHAR(120);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS work_position VARCHAR(120);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS user_group VARCHAR(120);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS user_role VARCHAR(120);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS signature_path VARCHAR(500);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS profile_image_path VARCHAR(500);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS is_active_user BOOLEAN DEFAULT TRUE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS can_mark_used BOOLEAN DEFAULT FALSE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_enabled BOOLEAN DEFAULT FALSE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_code VARCHAR(10);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_expires TIMESTAMP;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_attempts INTEGER DEFAULT 0;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_locked_until TIMESTAMP;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS tc_number VARCHAR(20);",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS last_password_change TIMESTAMP;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT FALSE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS force_tutorial BOOLEAN DEFAULT TRUE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS first_login_completed BOOLEAN DEFAULT FALSE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS terms_accepted BOOLEAN DEFAULT FALSE;",
-                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
-                    ]
-                    
-                    for sql in missing_columns:
-                        try:
-                            conn.execute(db.text(sql))
-                            conn.commit()
-                        except Exception as col_error:
-                            # Column might already exist, continue
-                            pass
-                            
-                print("✅ PostgreSQL schema updated")
-            except Exception as schema_error:
-                return {'success': False, 'error': f'Schema update failed: {str(schema_error)}'}
-            
-            # Now try to work with admin user
-            try:
-                admin_user = User.query.filter_by(username='admin').first()
-                if admin_user:
-                    # Update password hash
-                    admin_user.password_hash = generate_password_hash("@R9t$L7e!xP2w")
-                    db.session.commit()
-                    return {
-                        'success': True, 
-                        'message': 'PostgreSQL admin password updated to Werkzeug hash',
-                        'username': 'admin',
-                        'note': 'Password: @R9t$L7e!xP2w'
-                    }
-                else:
-                    # Create new admin user
-                    admin_password = generate_password_hash("@R9t$L7e!xP2w")
-                    admin = User(
-                        username='admin',
-                        full_name='Administrator',
-                        password_hash=admin_password,
-                        role='admin',
-                        is_active_user=True
-                    )
-                    db.session.add(admin)
-                    db.session.commit()
-                    return {
-                        'success': True, 
-                        'message': 'PostgreSQL admin user created with Werkzeug hash',
-                        'username': 'admin',
-                        'note': 'Password: @R9t$L7e!xP2w'
-                    }
-            except Exception as user_error:
-                return {'success': False, 'error': f'User operation failed: {str(user_error)}'}
-                
-        else:
-            # SQLite - Raw SQL
-            conn = get_db()
-            cursor = conn.cursor()
-            
-            # Check if admin exists
-            cursor.execute("SELECT id FROM envanter_users WHERE username = 'admin'")
-            admin_exists = cursor.fetchone()
-            
-            if admin_exists:
-                # Update existing admin
-                new_hash = generate_password_hash("admin123")
-                cursor.execute("UPDATE envanter_users SET password_hash = ? WHERE username = 'admin'", (new_hash,))
-                conn.commit()
-                close_db(conn)
-                return {
-                    'success': True, 
-                    'message': 'SQLite admin password updated to Werkzeug hash',
-                    'username': 'admin',
-                    'note': 'Password: admin123'
-                }
-            else:
-                # Create new admin
-                new_hash = generate_password_hash("admin123")
-                cursor.execute('''
-                    INSERT INTO envanter_users (username, password_hash, full_name, role, created_at, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', ('admin', new_hash, 'Administrator', 'admin', datetime.now(), 1))
-                conn.commit()
-                close_db(conn)
-                return {
-                    'success': True, 
-                    'message': 'SQLite admin user created with Werkzeug hash',
-                    'username': 'admin',
-                    'note': 'Password: admin123'
-                }
-                
-    except Exception as e:
-        return {'success': False, 'error': str(e), 'message': 'Migration failed'}

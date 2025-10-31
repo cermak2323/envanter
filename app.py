@@ -1405,7 +1405,10 @@ def admin_login_post():
 def get_users():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at DESC')
+    placeholder = get_db_placeholder()
+    
+    # envanter_users tablosundan oku
+    cursor.execute('SELECT id, username, full_name, role, created_at, is_active_user FROM envanter_users ORDER BY created_at DESC')
     rows = cursor.fetchall()
     
     # PostgreSQL row'larını dictionary'ye çevir
@@ -1416,7 +1419,8 @@ def get_users():
             'username': row[1], 
             'full_name': row[2],
             'role': row[3],
-            'created_at': row[4]
+            'created_at': row[4],
+            'is_active': row[5] if len(row) > 5 else True
         }
         users.append(user_dict)
     
@@ -1426,7 +1430,7 @@ def get_users():
 @app.route('/admin/users', methods=['POST'])
 @admin_required
 def create_user():
-    import hashlib
+    from werkzeug.security import generate_password_hash
     
     full_name = request.form.get('full_name')
     username = request.form.get('username')
@@ -1436,25 +1440,32 @@ def create_user():
     if not all([full_name, username, password]):
         return jsonify({'error': 'Tüm alanlar gereklidir'}), 400
     
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    # Werkzeug ile güvenli hash oluştur
+    password_hash = generate_password_hash(password)
     
     conn = get_db()
     cursor = conn.cursor()
+    placeholder = get_db_placeholder()
+    
     try:
-        cursor.execute('INSERT INTO users (username, password, password_hash, full_name, role) VALUES (%s, %s, %s, %s, %s)',
-                     (username, password, password_hash, full_name, role))
+        # envanter_users tablosuna ekle (users değil!)
+        cursor.execute(f'INSERT INTO envanter_users (username, password_hash, full_name, role, is_active_user) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
+                     (username, password_hash, full_name, role, True))
         conn.commit()
         return jsonify({'success': True, 'message': 'Kullanıcı oluşturuldu'})
-    except psycopg2.IntegrityError:
+    except Exception as e:
         conn.rollback()
-        return jsonify({'error': 'Bu kullanıcı adı zaten kullanılıyor'}), 400
+        if 'unique' in str(e).lower():
+            return jsonify({'error': 'Bu kullanıcı adı zaten kullanılıyor'}), 400
+        else:
+            return jsonify({'error': f'Kullanıcı oluşturulurken hata: {str(e)}'}), 400
     finally:
         close_db(conn)
 
 @app.route('/admin/users/<int:user_id>', methods=['PUT'])
 @admin_required
 def update_user(user_id):
-    import hashlib
+    from werkzeug.security import generate_password_hash
     
     full_name = request.form.get('full_name')
     username = request.form.get('username')
@@ -1466,21 +1477,25 @@ def update_user(user_id):
     
     conn = get_db()
     cursor = conn.cursor()
+    placeholder = get_db_placeholder()
     
     try:
         if password:  # Şifre değiştiriliyorsa
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-            cursor.execute('UPDATE users SET username = %s, password = %s, full_name = %s, role = %s WHERE id = %s',
+            password_hash = generate_password_hash(password)
+            cursor.execute(f'UPDATE envanter_users SET username = {placeholder}, password_hash = {placeholder}, full_name = {placeholder}, role = {placeholder} WHERE id = {placeholder}',
                          (username, password_hash, full_name, role, user_id))
         else:  # Şifre değiştirilmiyorsa
-            cursor.execute('UPDATE users SET username = %s, full_name = %s, role = %s WHERE id = %s',
+            cursor.execute(f'UPDATE envanter_users SET username = {placeholder}, full_name = {placeholder}, role = {placeholder} WHERE id = {placeholder}',
                          (username, full_name, role, user_id))
         
         conn.commit()
         return jsonify({'success': True, 'message': 'Kullanıcı güncellendi'})
-    except psycopg2.IntegrityError:
+    except Exception as e:
         conn.rollback()
-        return jsonify({'error': 'Bu kullanıcı adı zaten kullanılıyor'}), 400
+        if 'unique' in str(e).lower():
+            return jsonify({'error': 'Bu kullanıcı adı zaten kullanılıyor'}), 400
+        else:
+            return jsonify({'error': f'Kullanıcı güncellenirken hata: {str(e)}'}), 400
     finally:
         close_db(conn)
 
@@ -1492,7 +1507,9 @@ def delete_user(user_id):
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+    placeholder = get_db_placeholder()
+    
+    cursor.execute(f'DELETE FROM envanter_users WHERE id = {placeholder}', (user_id,))
     conn.commit()
     close_db(conn)
     return jsonify({'success': True, 'message': 'Kullanıcı silindi'})
@@ -1501,7 +1518,7 @@ def delete_user(user_id):
 @admin_required
 def change_user_password(user_id):
     """Admin tarafından kullanıcı şifresi değiştirme"""
-    import hashlib
+    from werkzeug.security import generate_password_hash
     
     data = request.get_json()
     new_password = data.get('password', '').strip()
@@ -1511,19 +1528,17 @@ def change_user_password(user_id):
     
     conn = get_db()
     cursor = conn.cursor()
+    placeholder = get_db_placeholder()
     
     try:
-        # User'ın kendi hesabı mı kontrol et
-        cursor.execute('SELECT id FROM users WHERE id = %s', (user_id,))
+        # User'ın envanter_users'da olup olmadığını kontrol et
+        cursor.execute(f'SELECT id FROM envanter_users WHERE id = {placeholder}', (user_id,))
         if not cursor.fetchone():
             return jsonify({'error': 'Kullanıcı bulunamadı'}), 404
         
-        # Şifre hash'le ve güncelle
-        password_hash = hashlib.sha256(new_password.encode()).hexdigest()
-        cursor.execute('UPDATE users SET password = %s WHERE id = %s',
-                     (new_password, user_id))
-        # Eski hash'ı de güncelle compat için
-        cursor.execute('UPDATE users SET password_hash = %s WHERE id = %s',
+        # Werkzeug ile güvenli hash oluştur ve güncelle
+        password_hash = generate_password_hash(new_password)
+        cursor.execute(f'UPDATE envanter_users SET password_hash = {placeholder} WHERE id = {placeholder}',
                      (password_hash, user_id))
         
         conn.commit()

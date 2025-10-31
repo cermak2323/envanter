@@ -767,3 +767,265 @@ WHERE envanter_users.username = ?
 2025-10-31 08:59:55,575 - werkzeug - INFO -  * Restarting with stat
 2025-10-31 08:59:57,709 - werkzeug - WARNING -  * Debugger is active!
 2025-10-31 08:59:57,716 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 09:14:29,345 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 09:14:31,209 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 09:14:31,214 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:20:12,230 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\models.py', reloading
+2025-10-31 10:20:12,599 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:20:15,163 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:20:15,169 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:20:16,226 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\init_local_db.py', reloading
+2025-10-31 10:20:16,542 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:20:18,545 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:20:18,549 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:41:45,916 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:41:46,242 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:41:48,244 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:41:48,260 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:42:07,542 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:42:07,754 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:42:09,679 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:42:09,682 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:42:19,831 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:42:20,054 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:42:22,033 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:42:22,033 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:42:30,178 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:42:30,381 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:42:32,297 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:42:32,297 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:42:43,511 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:42:43,724 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:42:45,806 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:42:45,812 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:42:53,968 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:42:54,197 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:42:56,217 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:42:56,228 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:43:06,358 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 10:43:06,654 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:43:08,694 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:43:08,694 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 10:47:22,980 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 10:47:25,055 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 10:47:25,060 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:09:05,720 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:09:07,799 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:09:07,799 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:10:05,499 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:10:05,721 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:10:08,016 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:10:08,026 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:12:44,519 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:12:46,588 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:12:46,593 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:14:48,089 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:14:50,130 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:14:50,135 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:18:11,758 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:18:14,142 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:18:14,148 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:19:29,931 - root - ERROR - Error in smart QR upload system: no such column: quantity
+Traceback (most recent call last):
+  File "C:\Users\rsade\Desktop\Yeni klasör\EnvanterQR\EnvanterQR\EnvanterQR\EnvanterQR\app.py", line 912, in upload_parts
+    cursor.execute('SELECT part_code, part_name, quantity FROM parts')
+sqlite3.OperationalError: no such column: quantity
+2025-10-31 11:19:54,494 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:19:54,731 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:19:56,686 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:19:56,687 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:20:17,035 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:20:17,238 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:20:19,292 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:20:19,292 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:20:38,589 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:20:38,780 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:20:40,715 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:20:40,726 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:21:18,947 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:21:20,852 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:21:20,852 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:22:29,708 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:22:31,730 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:22:31,735 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:22:57,007 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:22:59,162 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:22:59,167 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:23:31,681 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:23:31,907 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:23:34,056 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:23:34,069 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:23:51,328 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:23:51,592 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:23:53,662 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:23:53,662 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:24:04,811 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:24:05,137 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:24:07,359 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:24:07,364 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:24:18,538 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:24:18,839 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:24:20,800 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:24:20,805 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:24:31,968 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:24:32,195 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:24:34,241 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:24:34,241 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:25:01,639 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:25:01,862 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:25:03,783 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:25:03,791 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:25:15,044 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:25:15,363 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:25:17,628 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:25:17,645 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:25:27,448 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:25:29,311 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:25:29,323 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 11:36:38,823 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 11:36:39,045 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 11:36:41,113 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 11:36:41,113 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 12:02:49,693 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 12:02:50,168 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 12:02:52,473 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 12:02:52,488 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 12:05:38,584 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 12:05:40,697 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 12:05:40,697 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 12:27:31,424 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 12:27:33,339 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 12:27:33,339 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 13:16:51,385 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 13:16:53,368 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 13:16:53,376 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 13:40:44,799 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\sync_render_env.py', reloading
+2025-10-31 13:40:45,115 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 13:40:47,607 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 13:40:47,607 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 14:39:12,387 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 14:39:14,339 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 14:39:14,347 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 14:40:52,580 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 14:40:53,156 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 14:40:55,795 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 14:40:55,795 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 14:42:03,638 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 14:42:03,886 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 14:42:05,970 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 14:42:05,970 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 14:42:17,135 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 14:42:17,386 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 14:42:19,400 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 14:42:19,400 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 14:43:00,940 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 14:43:01,287 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 14:43:03,363 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 14:43:03,370 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 15:18:18,404 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 15:18:18,656 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 15:18:21,230 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 15:18:21,240 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 15:18:31,391 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 15:18:31,604 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 15:18:33,534 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 15:18:33,539 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 15:18:42,689 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 15:18:42,892 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 15:18:44,864 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 15:18:44,869 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 15:18:50,974 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 15:18:51,609 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 15:18:53,968 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 15:18:53,973 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 15:19:40,138 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 15:19:42,089 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 15:19:42,089 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 15:51:15,664 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 15:51:17,624 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 15:51:17,624 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 16:23:27,305 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 16:23:29,496 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 16:23:29,503 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 16:24:25,353 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 16:24:27,227 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 16:24:27,243 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 16:33:51,866 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 16:33:53,787 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 16:33:53,802 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 16:43:16,674 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 16:43:18,913 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 16:43:18,913 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 17:19:30,755 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 17:19:32,683 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 17:19:32,688 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 17:25:22,833 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 17:25:23,057 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 17:25:25,028 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 17:25:25,037 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 17:25:42,441 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 17:25:42,749 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 17:25:44,751 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 17:25:44,759 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 17:31:32,716 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 17:31:34,644 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 17:31:34,655 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 17:34:48,993 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 17:34:51,205 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 17:34:51,210 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 20:58:29,075 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\quick_test.py', reloading
+2025-10-31 20:58:29,441 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 20:58:33,800 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 20:58:33,800 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 20:59:26,525 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 20:59:27,224 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 20:59:29,791 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 20:59:29,795 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 20:59:34,896 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 20:59:35,294 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 20:59:37,877 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 20:59:37,877 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 21:00:41,783 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 21:00:42,113 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 21:00:44,470 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 21:00:44,476 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 21:11:50,847 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 21:11:51,565 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 21:11:54,629 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 21:11:54,634 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 21:15:51,275 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 21:15:51,546 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 21:15:53,949 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 21:15:53,959 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 21:22:38,948 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 21:22:39,638 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 21:22:43,210 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 21:22:43,216 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 21:24:02,415 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 21:24:02,623 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 21:24:04,688 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 21:24:04,693 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 21:35:35,776 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 21:35:36,176 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 21:35:38,380 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 21:35:38,386 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 23:48:04,443 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\generate_hash.py', reloading
+2025-10-31 23:48:04,732 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 23:48:09,982 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 23:48:09,987 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 23:57:32,594 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 23:57:33,183 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 23:57:35,422 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 23:57:35,428 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 23:57:41,524 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 23:57:41,907 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 23:57:44,320 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 23:57:44,325 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 23:58:12,737 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 23:58:13,407 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 23:58:15,571 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 23:58:15,576 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 23:58:22,684 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 23:58:22,953 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 23:58:25,140 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 23:58:25,146 - werkzeug - INFO -  * Debugger PIN: 527-412-432

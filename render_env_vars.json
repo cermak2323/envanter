@@ -1,0 +1,32 @@
+[
+  {
+    "key": "DATABASE_URL",
+    "value": "postgresql://cermak_envanter_user:N22HyFcRf3bvgMzkK1J5yNYgrXEfIgNC@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter?sslmode=require",
+    "scope": "secret"
+  },
+  {
+    "key": "B2_APPLICATION_KEY_ID", 
+    "value": "00313590dd2fde60000000004",
+    "scope": "environment"
+  },
+  {
+    "key": "B2_APPLICATION_KEY",
+    "value": "K003NeFyCuFJzM/1Qo1xYXu+f/M87WU", 
+    "scope": "secret"
+  },
+  {
+    "key": "B2_BUCKET_NAME",
+    "value": "envanter-qr-bucket",
+    "scope": "environment"
+  },
+  {
+    "key": "SESSION_SECRET",
+    "value": "bd1a6b5747198b642e34974c4c8a277040ae6095a97a24e8076d2e1c68573fd2",
+    "scope": "secret"
+  },
+  {
+    "key": "ADMIN_COUNT_PASSWORD", 
+    "value": "@R9t$L7e!xP2w#Mn8Zq^Y4v&Bc6*Hd3J",
+    "scope": "secret"
+  }
+]

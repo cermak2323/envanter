@@ -946,6 +946,14 @@ def upload_parts():
         cursor = conn.cursor()
         placeholder = get_db_placeholder()
         
+        # Admin user'ın ID'sini al (tüm upload işlemi için)
+        user_id = session.get('user_id')
+        if not user_id:
+            # Default olarak admin user'ı al
+            cursor.execute(f'SELECT id FROM envanter_users WHERE username = {placeholder}', ('admin',))
+            admin_user = cursor.fetchone()
+            user_id = admin_user[0] if admin_user else 1  # fallback ID
+        
         # Mevcut parçaları ve QR kodları al
         cursor.execute('SELECT part_code, part_name FROM parts')
         existing_parts = {row[0]: row[1] for row in cursor.fetchall()}
@@ -985,7 +993,7 @@ def upload_parts():
                     for i in range(missing_count):
                         qr_id = f"{part_code}-{uuid.uuid4().hex[:8]}"
                         cursor.execute(f'INSERT INTO qr_codes (qr_id, part_code, part_name, created_at, created_by, is_used, is_downloaded) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
-                                     (qr_id, part_code, part_name, datetime.now(), session.get('username', 'system'), False, False))
+                                     (qr_id, part_code, part_name, datetime.now(), user_id, False, False))
                         new_qr_codes.append(qr_id)
                     
                     # Parça bilgilerini güncelle (quantity değil, sadece isim)
@@ -1016,13 +1024,21 @@ def upload_parts():
                 # YENİ PARÇA - Tamamen yeni QR kodları oluştur
                 print(f"🆕 {part_code}: Yeni parça - {needed_quantity} QR kod oluşturuluyor")
                 
+                # Admin user'ın ID'sini al
+                user_id = session.get('user_id')
+                if not user_id:
+                    # Default olarak admin user'ı al
+                    cursor.execute(f'SELECT id FROM envanter_users WHERE username = {placeholder}', ('admin',))
+                    admin_user = cursor.fetchone()
+                    user_id = admin_user[0] if admin_user else 1  # fallback ID
+                
                 cursor.execute(f'INSERT INTO parts (part_code, part_name, description, created_at, created_by, is_active) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
-                             (part_code, part_name, '', datetime.now(), session.get('username', 'system'), True))
+                             (part_code, part_name, '', datetime.now(), user_id, True))
                 
                 for i in range(needed_quantity):
                     qr_id = f"{part_code}-{uuid.uuid4().hex[:8]}"
                     cursor.execute(f'INSERT INTO qr_codes (qr_id, part_code, part_name, created_at, created_by, is_used, is_downloaded) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
-                                 (qr_id, part_code, part_name, datetime.now(), session.get('username', 'system'), False, False))
+                                 (qr_id, part_code, part_name, datetime.now(), user_id, False, False))
                     new_qr_codes.append(qr_id)
                 
                 new_parts.append(part_code)

@@ -442,6 +442,10 @@
             <i class="bi bi-file-earmark-excel text-success" style="font-size: 3rem; margin-bottom: 20px;"></i>
             <h5>QR Kodları Oluşturmak İçin Excel Dosyası Yükleyin</h5>
             <p class="text-muted">Excel dosyanız <strong>part_code</strong>, <strong>part_name</strong> ve <strong>quantity</strong> sütunlarını içermelidir</p>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Gelişmiş QR yönetimi için <a href="/admin" class="alert-link">Admin Panel</a>'i kullanabilirsiniz.
+            </div>
             <input type="file" class="form-control mb-3" id="partsFile" accept=".xlsx,.xls" style="max-width: 400px; margin: 0 auto;">
             <button class="btn btn-cermak" onclick="uploadParts()">
                 <i class="bi bi-upload"></i> Excel Yükle ve QR Oluştur
@@ -469,22 +473,11 @@
                         <div id="paginationInfo" class="text-muted small"></div>
                     </div>
                     <div class="col-md-4 text-end">
-                        <button class="btn btn-success me-2" onclick="downloadAllQR()">
-                            <i class="bi bi-download"></i> Tüm QR Kodları İndir
-                        </button>
-                        <div class="dropdown d-inline">
-                            <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-gear"></i> İşlemler
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><button class="dropdown-item" onclick="confirmClearAllQRs()">
-                                    <i class="bi bi-trash text-danger"></i> Tüm QR Kodları Sil
-                                </button></li>
-                                <li><button class="dropdown-item" onclick="showUploadNewArea()">
-                                    <i class="bi bi-plus-circle text-primary"></i> Yeni QR Kodları Ekle
-                                </button></li>
-                            </ul>
-                        </div>
+                        <!-- QR Yönetimi butonları admin paneline taşındı -->
+                        <span class="text-muted small">
+                            <i class="bi bi-info-circle"></i> 
+                            QR yönetimi için <a href="/admin" class="text-decoration-none">Admin Panel</a>'i kullanın
+                        </span>
                     </div>
                 </div>
             </div>
@@ -957,9 +950,7 @@
         }
 
         function showUploadNewArea() {
-            if (confirm('Yeni QR kodları eklemek için mevcut QR kodlar silinecek.\n\nDevam etmek istiyor musunuz?')) {
-                clearAllQRs();
-            }
+            alert('QR yönetimi için Admin Panel\'i kullanın: /admin');
         }
 
         function goToMain() {

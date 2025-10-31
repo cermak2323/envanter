@@ -29,8 +29,19 @@ def get_database_uri():
     if IS_PRODUCTION:
         # PRODUCTION: Render.com PostgreSQL
         database_url = os.environ.get('DATABASE_URL')
+        
+        # Eğer DATABASE_URL yoksa, geçici SQLite kullan (deployment test için)
         if not database_url:
-            raise ValueError("DATABASE_URL environment variable not set for production!")
+            print("⚠️  WARNING: DATABASE_URL not found! Using temporary SQLite for deployment test")
+            print("🔧 To fix: Set DATABASE_URL in Render Dashboard → Environment Variables")
+            
+            # Geçici SQLite (sadece deployment test için)
+            temp_db_path = BASE_DIR / 'temp_production.db'
+            temp_db_path.parent.mkdir(exist_ok=True)
+            temp_uri = f'sqlite:///{temp_db_path}'
+            print(f"🚨 TEMPORARY SQLite (Production): {temp_db_path}")
+            print(f"🚨 This is NOT recommended for production use!")
+            return temp_uri
         
         # PostgreSQL sslmode fix
         if database_url.startswith('postgres://'):

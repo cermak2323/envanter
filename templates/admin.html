@@ -127,6 +127,8 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
         }
 
         .btn-primary-custom:hover {
@@ -135,10 +137,23 @@
             color: white;
         }
 
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%) !important;
+        }
+
         .admin-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 1.5rem;
+            align-items: start;
+        }
+
+        .qr-management-card {
+            grid-column: span 2;
         }
 
         @media (max-width: 768px) {
@@ -156,8 +171,21 @@
                 grid-template-columns: 1fr;
             }
             
+            .qr-management-card {
+                grid-column: span 1;
+            }
+            
             .admin-card {
                 padding: 1.5rem;
+            }
+
+            .d-flex.flex-wrap.gap-2 {
+                flex-direction: column;
+            }
+
+            .btn-primary-custom {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -225,17 +253,28 @@
             </div>
 
             <!-- QR Kodları -->
-            <div class="admin-card">
+            <div class="admin-card qr-management-card">
                 <div class="card-icon">
                     <i class="bi bi-qr-code"></i>
                 </div>
                 <div class="card-title">QR Kod Yönetimi</div>
                 <div class="card-description">
-                    Parça QR kodlarını görüntüleyin, yeni kodlar oluşturun ve yazdırın.
+                    Parça QR kodlarını yönetin, yeni kodlar oluşturun ve toplu işlemler yapın.
                 </div>
-                <a href="/qr_codes" class="btn-primary-custom">
-                    <i class="bi bi-qr-code-scan"></i> QR Kodları
-                </a>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="/qr_codes" class="btn-primary-custom">
+                        <i class="bi bi-qr-code-scan"></i> QR Kodları Görüntüle
+                    </a>
+                    <button class="btn-primary-custom" onclick="showSmartUploadModal()">
+                        <i class="bi bi-file-earmark-excel"></i> Parça Listesi Yükle
+                    </button>
+                    <button class="btn-primary-custom" onclick="downloadAllQRCodes()">
+                        <i class="bi bi-download"></i> Tüm QR Kodları İndir
+                    </button>
+                    <button class="btn-primary-custom btn-warning" onclick="confirmClearAllQRs()" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);">
+                        <i class="bi bi-trash"></i> Tüm QR Kodları Sil
+                    </button>
+                </div>
             </div>
 
             <!-- Sistem Ayarları -->
@@ -287,6 +326,48 @@
         </div>
     </div>
 
+    <!-- Akıllı QR Yükleme Modal -->
+    <div class="modal fade" id="smartUploadModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: var(--border-radius);">
+                <div class="modal-header border-0" style="background: var(--gradient-primary); color: white; border-radius: var(--border-radius) var(--border-radius) 0 0;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-excel me-2"></i>🧠 Akıllı QR Sistemi - Parça Listesi Yükle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="alert alert-success">
+                        <i class="bi bi-shield-check"></i> <strong>✅ Mevcut QR kodları korunur!</strong>
+                    </div>
+                    <div class="mb-4">
+                        <i class="bi bi-file-earmark-excel text-primary" style="font-size: 4rem;"></i>
+                    </div>
+                    <div class="text-start mb-4">
+                        <h6>🧠 Akıllı Sistem Özellikleri:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> Yeni parçalar için QR kodları oluşturulur</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Mevcut parçalar için eksik QR kodları tamamlanır</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Hiçbir QR kod silinmez - sadece eklenir!</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <input type="file" class="form-control" id="smartPartsFile" accept=".xlsx,.xls,.csv" style="border-radius: 12px;">
+                        <small class="text-muted">Excel dosyanız <strong>part_code</strong>, <strong>part_name</strong> ve <strong>quantity</strong> sütunlarını içermelidir</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 12px;">
+                        <i class="bi bi-x"></i> İptal
+                    </button>
+                    <button type="button" class="btn btn-primary-custom" onclick="uploadSmartParts()">
+                        <i class="bi bi-upload"></i> Akıllı Yükleme
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function showNotification(message, type = 'info') {
@@ -318,6 +399,79 @@
 
         async function showDatabaseInfo() {
             showNotification('Veritabanı durumu: Aktif\nToplam tablolar: 5\nSon güncelleme: ' + new Date().toLocaleString('tr-TR'), 'info');
+        }
+
+        // QR Kod Yönetimi Fonksiyonları
+        function showSmartUploadModal() {
+            const modal = new bootstrap.Modal(document.getElementById('smartUploadModal'));
+            modal.show();
+        }
+
+        async function uploadSmartParts() {
+            const fileInput = document.getElementById('smartPartsFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('Lütfen bir Excel veya CSV dosyası seçin', 'error');
+                return;
+            }
+
+            const uploadBtn = event.target;
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Akıllı Sistem Çalışıyor...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload_parts', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('✅ Akıllı QR sistemi tamamlandı!\n\n' + data.message, 'success');
+                    // Modal'ı kapat
+                    bootstrap.Modal.getInstance(document.getElementById('smartUploadModal')).hide();
+                    // Dosya input'unu temizle
+                    fileInput.value = '';
+                } else {
+                    showNotification('❌ Hata: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('💥 Sistem hatası: ' + error.message, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = originalText;
+            }
+        }
+
+        function downloadAllQRCodes() {
+            showNotification('QR kodları indiriliyor...', 'info');
+            window.location.href = '/download_all_qr';
+        }
+
+        async function confirmClearAllQRs() {
+            if (confirm('⚠️ TÜM QR kodlarını silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz ve tüm QR kodları kalıcı olarak silinecektir.')) {
+                try {
+                    const response = await fetch('/clear_all_qrs', {
+                        method: 'POST'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showNotification('✅ ' + data.message, 'success');
+                    } else {
+                        showNotification('❌ Hata: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    showNotification('💥 Sistem hatası: ' + error.message, 'error');
+                }
+            }
         }
     </script>
 </body>

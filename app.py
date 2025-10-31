@@ -656,6 +656,28 @@ def favicon():
 def index():
     if 'user_id' not in session:
         return render_template('login.html')
+    
+    # ✅ SAYIM KONTROLÜ: Aktif sayım varsa kullanıcıları sayım sayfasına yönlendir
+    conn = get_db()
+    cursor = conn.cursor()
+    placeholder = get_db_placeholder()
+    
+    try:
+        cursor.execute(f'SELECT COUNT(*) FROM count_sessions WHERE status = {placeholder}', ('active',))
+        active_session_count = cursor.fetchone()[0]
+        
+        # Aktif sayım varsa sayım sayfasına yönlendir
+        if active_session_count > 0:
+            print(f"DEBUG: Aktif sayım bulundu ({active_session_count}), kullanıcı sayım sayfasına yönlendiriliyor")
+            close_db(conn)
+            return redirect('/count')
+        
+    except Exception as e:
+        print(f"DEBUG: Sayım kontrolü hatası: {e}")
+    finally:
+        close_db(conn)
+    
+    # Aktif sayım yoksa normal ana sayfayı göster
     return render_template('index.html')
 
 @app.route('/api/dashboard/stats')

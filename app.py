@@ -404,7 +404,7 @@ def generate_strong_password():
     return ''.join(password)
 
 # Admin sayım şifresi
-ADMIN_COUNT_PASSWORD = "admin123"
+ADMIN_COUNT_PASSWORD = "@R9t$L7e!xP2w"
 print(f"DEBUG: ADMIN_COUNT_PASSWORD = '{ADMIN_COUNT_PASSWORD}'")  # DEBUG
 
 os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -1351,8 +1351,8 @@ def download_single_qr(qr_id):
         
         return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
 
-# Admin password: set to admin123 for development
-ADMIN_PASSWORD = "admin123"
+# Admin password: production password
+ADMIN_PASSWORD = "@R9t$L7e!xP2w"
 print(f"DEBUG: ADMIN_PASSWORD = '{ADMIN_PASSWORD}'")  # DEBUG
 
 @app.route('/admin')

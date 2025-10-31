@@ -2441,3 +2441,81 @@ if __name__ == '__main__':
         print("🔒 Security: Headers + Rate Limiting Active")
         print()
         socketio.run(app, host='127.0.0.1', port=5002, debug=True)
+
+# ===== MIGRATION ENDPOINTS =====
+@app.route('/migrate/update_admin_password')
+def migrate_update_admin_password():
+    """Production migration: Update admin password to use Werkzeug hashing"""
+    try:
+        from werkzeug.security import generate_password_hash
+        
+        if USE_POSTGRESQL:
+            # PostgreSQL - SQLAlchemy
+            admin_user = User.query.filter_by(username='admin').first()
+            if admin_user:
+                # Update password hash
+                admin_user.password_hash = generate_password_hash("@R9t$L7e!xP2w")
+                db.session.commit()
+                return {
+                    'success': True, 
+                    'message': 'PostgreSQL admin password updated to Werkzeug hash',
+                    'username': 'admin',
+                    'note': 'Password: @R9t$L7e!xP2w'
+                }
+            else:
+                # Create new admin user
+                admin_password = generate_password_hash("@R9t$L7e!xP2w")
+                admin = User(
+                    username='admin',
+                    full_name='Administrator',
+                    password_hash=admin_password,
+                    role='admin',
+                    is_active_user=True
+                )
+                db.session.add(admin)
+                db.session.commit()
+                return {
+                    'success': True, 
+                    'message': 'PostgreSQL admin user created with Werkzeug hash',
+                    'username': 'admin',
+                    'note': 'Password: @R9t$L7e!xP2w'
+                }
+        else:
+            # SQLite - Raw SQL
+            conn = get_db()
+            cursor = conn.cursor()
+            
+            # Check if admin exists
+            cursor.execute("SELECT id FROM envanter_users WHERE username = 'admin'")
+            admin_exists = cursor.fetchone()
+            
+            if admin_exists:
+                # Update existing admin
+                new_hash = generate_password_hash("admin123")
+                cursor.execute("UPDATE envanter_users SET password_hash = ? WHERE username = 'admin'", (new_hash,))
+                conn.commit()
+                close_db(conn)
+                return {
+                    'success': True, 
+                    'message': 'SQLite admin password updated to Werkzeug hash',
+                    'username': 'admin',
+                    'note': 'Password: admin123'
+                }
+            else:
+                # Create new admin
+                new_hash = generate_password_hash("admin123")
+                cursor.execute('''
+                    INSERT INTO envanter_users (username, password_hash, full_name, role, created_at, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', ('admin', new_hash, 'Administrator', 'admin', datetime.now(), 1))
+                conn.commit()
+                close_db(conn)
+                return {
+                    'success': True, 
+                    'message': 'SQLite admin user created with Werkzeug hash',
+                    'username': 'admin',
+                    'note': 'Password: admin123'
+                }
+                
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'message': 'Migration failed'}

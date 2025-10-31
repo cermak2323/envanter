@@ -7,6 +7,7 @@ from collections import defaultdict
 import psycopg2
 import psycopg2.extras
 from psycopg2.pool import SimpleConnectionPool
+import sqlite3
 import pandas as pd
 import qrcode
 from io import BytesIO
@@ -84,16 +85,30 @@ print(f"🏠 Local (Development): {IS_LOCAL}")
 
 if IS_PRODUCTION:
     # PRODUCTION: PostgreSQL + B2 Storage (KALICI)
-    app.config.from_object(ProductionConfig)
     print("☁️ Production Mode: PostgreSQL + B2 Storage (KALICI)")
     USE_B2_STORAGE = True
     USE_POSTGRESQL = True
+    
+    # db_config.py kullan
+    app.config.from_object(ProductionConfig)
+    
+    # Environment variable kontrolü
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        print("⚠️  WARNING: DATABASE_URL not found in environment!")
+        print("🔧 Please set DATABASE_URL in Render Dashboard")
+        print("📖 See RENDER_ENV_SETUP.md for instructions")
+    
 else:
     # LOCAL: SQLite + Local Storage (GEÇİCİ)
-    app.config.from_object(DevelopmentConfig)
     print("🏠 Local Mode: SQLite + Local Storage (GEÇİCİ)")
     USE_B2_STORAGE = False
     USE_POSTGRESQL = False
+    
+    # db_config.py kullan
+    app.config.from_object(DevelopmentConfig)
+
+# Database setup
 
 print(f"💾 Database: {'PostgreSQL' if USE_POSTGRESQL else 'SQLite'}")
 print(f"📁 Storage: {'B2 Cloud' if USE_B2_STORAGE else 'Local Files'}")
@@ -394,6 +409,10 @@ print(f"DEBUG: ADMIN_COUNT_PASSWORD = '{ADMIN_COUNT_PASSWORD}'")  # DEBUG
 
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
+def get_db_placeholder():
+    """Database'e göre doğru placeholder döndür (%s for PostgreSQL, ? for SQLite)"""
+    return '?' if not USE_POSTGRESQL else '%s'
+
 def get_db():
     """Get database connection - dual mode (PostgreSQL pool vs SQLite direct)"""
     
@@ -526,7 +545,8 @@ def init_db():
                 admin_user = User.query.filter_by(username='admin').first()
                 if not admin_user:
                     print("➕ Creating default PostgreSQL admin user...")
-                    admin_password = hashlib.sha256("admin123".encode()).hexdigest()
+                    from werkzeug.security import generate_password_hash
+                    admin_password = generate_password_hash("@R9t$L7e!xP2w")
                     admin = User(
                         username='admin',
                         full_name='Administrator',
@@ -536,9 +556,9 @@ def init_db():
                     )
                     db.session.add(admin)
                     db.session.commit()
-                    print("✅ PostgreSQL admin user created (admin/admin123)")
-                    
-            else:
+                    print("✅ PostgreSQL admin user created (admin/@R9t$L7e!xP2w)")
+                else:
+                    print("✅ PostgreSQL admin user already exists")
                 # LOCAL: SQLite - Raw SQL ile (basit tablo yapısı)
                 print("🏠 Local SQLite mode - checking simple table structure")
                 
@@ -546,17 +566,26 @@ def init_db():
                 conn = get_db()
                 cursor = conn.cursor()
                 
+                # SQLite schema'yı güncelle (full_name column ekle)
+                try:
+                    cursor.execute("ALTER TABLE envanter_users ADD COLUMN full_name VARCHAR(255)")
+                    print("✅ Added full_name column to SQLite")
+                except sqlite3.OperationalError:
+                    # Column zaten varsa veya başka hata
+                    pass
+                
                 # Admin user var mı kontrol et (SQLite raw SQL)
                 cursor.execute("SELECT * FROM envanter_users WHERE username = 'admin'")
                 admin_exists = cursor.fetchone()
                 
                 if not admin_exists:
                     print("➕ Creating default SQLite admin user...")
-                    admin_password_hash = hashlib.sha256("admin123".encode()).hexdigest()
+                    from werkzeug.security import generate_password_hash
+                    admin_password_hash = generate_password_hash("admin123")
                     cursor.execute('''
-                        INSERT INTO envanter_users (username, password_hash, role, created_at, is_active)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', ('admin', admin_password_hash, 'admin', datetime.now(), 1))
+                        INSERT INTO envanter_users (username, password_hash, full_name, role, created_at, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', ('admin', admin_password_hash, 'Administrator', 'admin', datetime.now(), 1))
                     conn.commit()
                     print("✅ SQLite admin user created (admin/admin123)")
                 else:
@@ -594,7 +623,8 @@ def admin_required(f):
             return jsonify({'error': 'Giriş yapmanız gerekiyor'}), 401
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute('SELECT role FROM users WHERE id = %s', (session['user_id'],))
+        placeholder = get_db_placeholder()
+        cursor.execute(f'SELECT role FROM envanter_users WHERE id = {placeholder}', (session['user_id'],))
         user = cursor.fetchone()
         close_db(conn)
         if not user or user[0] != 'admin':
@@ -721,7 +751,7 @@ def count_page():
 @app.route('/login', methods=['POST'])
 @rate_limit_login
 def login():
-    import hashlib
+    from werkzeug.security import check_password_hash
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
@@ -729,13 +759,20 @@ def login():
     if not username or not password:
         return jsonify({'error': 'Kullanıcı adı ve şifre gerekli'}), 400
     
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    
     conn = get_db()
     cursor = conn.cursor()
+    placeholder = get_db_placeholder()
     try:
-        cursor.execute('SELECT id, username, full_name, role FROM users WHERE username = %s AND password_hash = %s',
-                     (username, password_hash))
+        # Dual-mode: SQLite vs PostgreSQL table compatibility
+        # Get user data first, then verify password
+        if USE_POSTGRESQL:
+            # PostgreSQL: Full schema with envanter_users table
+            cursor.execute(f'SELECT id, username, full_name, role, password_hash FROM envanter_users WHERE username = {placeholder}',
+                         (username,))
+        else:
+            # SQLite: envanter_users table with full_name (after column addition)
+            cursor.execute(f'SELECT id, username, COALESCE(full_name, username) as full_name, role, password_hash FROM envanter_users WHERE username = {placeholder}',
+                         (username,))
     except psycopg2.OperationalError as oe:
         # Connection was closed unexpectedly (e.g., server-side idle timeout / SSL termination).
         logging.warning(f"OperationalError on login query, attempting one retry: {oe}")
@@ -748,8 +785,13 @@ def login():
             init_db_pool()
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute('SELECT id, username, full_name, role FROM users WHERE username = %s AND password_hash = %s',
-                         (username, password_hash))
+            placeholder = get_db_placeholder()
+            if USE_POSTGRESQL:
+                cursor.execute(f'SELECT id, username, full_name, role, password_hash FROM envanter_users WHERE username = {placeholder}',
+                             (username,))
+            else:
+                cursor.execute(f'SELECT id, username, COALESCE(full_name, username) as full_name, role, password_hash FROM envanter_users WHERE username = {placeholder}',
+                             (username,))
         except Exception as e2:
             logging.exception(f"Failed to execute login query after retry: {e2}")
             try:
@@ -761,7 +803,7 @@ def login():
     user = cursor.fetchone()
     close_db(conn)
     
-    if user:
+    if user and check_password_hash(user[4], password):  # user[4] is password_hash
         session['user_id'] = user[0]
         session['username'] = user[1]
         session['full_name'] = user[2]
@@ -866,9 +908,17 @@ def debug_qr_codes():
 @app.route('/upload_parts', methods=['POST'])
 @login_required
 def upload_parts():
+    """
+    Akıllı QR Kod Ekleme Sistemi:
+    - Mevcut QR kodları SİLİNMEZ
+    - Excel'deki yeni parçalar için QR oluşturur
+    - Eksik olan QR kod sayılarını tamamlar
+    - Mevcut parçaların adetini kontrol eder
+    """
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) as count FROM count_sessions WHERE status = %s', ('active',))
+    placeholder = get_db_placeholder()
+    cursor.execute(f'SELECT COUNT(*) as count FROM count_sessions WHERE is_active = {placeholder}', (True,))
     active_session = cursor.fetchone()
     close_db(conn)
     
@@ -894,75 +944,120 @@ def upload_parts():
         
         conn = get_db()
         cursor = conn.cursor()
+        placeholder = get_db_placeholder()
         
-        # Mevcut QR kodları için dosyaları sil
-        if USE_B2_STORAGE and get_b2_service:
-            # PRODUCTION: B2'den dosyaları sil (KALICI)
-            try:
-                b2_service = get_b2_service()
-                cursor.execute('SELECT qr_id FROM qr_codes')
-                existing_qr_codes = cursor.fetchall()
-                
-                for row in existing_qr_codes:
-                    qr_id = row[0]
-                    file_path = f'qr_codes/{qr_id}.png'
-                    b2_service.delete_file(file_path)
-                    logging.info(f"Deleted QR code from B2: {file_path}")
-                    
-            except Exception as e:
-                logging.error(f"Error deleting QR codes from B2: {e}")
-        else:
-            # LOCAL: Static dosyaları sil (GEÇİCİ)
-            try:
-                qr_dir = os.path.join('static', 'qrcodes')
-                if os.path.exists(qr_dir):
-                    for filename in os.listdir(qr_dir):
-                        if filename.endswith('.png'):
-                            os.remove(os.path.join(qr_dir, filename))
-                            logging.info(f"Deleted local QR code: {filename}")
-            except Exception as e:
-                logging.error(f"Error deleting local QR codes: {e}")
+        # Mevcut parçaları ve QR kodları al
+        cursor.execute('SELECT part_code, part_name FROM parts')
+        existing_parts = {row[0]: row[1] for row in cursor.fetchall()}
         
-        cursor.execute('DELETE FROM parts')
-        cursor.execute('DELETE FROM qr_codes')
+        cursor.execute('SELECT part_code, COUNT(*) as qr_count FROM qr_codes GROUP BY part_code')
+        existing_qr_counts = {row[0]: row[1] for row in cursor.fetchall()}
         
-        qr_codes_data = []
+        new_qr_codes = []
+        updated_parts = []
+        new_parts = []
+        processing_summary = {
+            'new_parts': 0,
+            'updated_parts': 0, 
+            'new_qr_codes': 0,
+            'existing_qr_codes': sum(existing_qr_counts.values())
+        }
+        
+        print(f"\n🔄 AKILLI QR KOD SİSTEMİ")
+        print(f"📊 Mevcut QR kod sayısı: {processing_summary['existing_qr_codes']}")
+        print(f"📋 Excel'den gelen parça sayısı: {len(df)}")
+        print("="*50)
         
         for _, row in df.iterrows():
             part_code = str(row['part_code'])
             part_name = str(row['part_name'])
-            quantity = int(row['quantity'])
+            needed_quantity = int(row['quantity'])
             
-            cursor.execute('INSERT INTO parts (part_code, part_name, quantity) VALUES (%s, %s, %s)',
-                         (part_code, part_name, quantity))
-            
-            for i in range(quantity):
-                qr_id = f"{part_code}-{uuid.uuid4().hex[:8]}"
-                cursor.execute('INSERT INTO qr_codes (qr_id, part_code, part_name) VALUES (%s, %s, %s)',
-                             (qr_id, part_code, part_name))
-                qr_codes_data.append({
-                    'qr_id': qr_id,
-                    'part_code': part_code,
-                    'part_name': part_name
-                })
+            if part_code in existing_parts:
+                # MEVCUT PARÇA - Adet kontrolü yap
+                current_qr_count = existing_qr_counts.get(part_code, 0)
+                
+                if needed_quantity > current_qr_count:
+                    # EKSİK QR KODLARI OLUŞTUR
+                    missing_count = needed_quantity - current_qr_count
+                    print(f"📦 {part_code}: {current_qr_count} mevcut → {needed_quantity} hedef = {missing_count} eksik QR")
+                    
+                    for i in range(missing_count):
+                        qr_id = f"{part_code}-{uuid.uuid4().hex[:8]}"
+                        cursor.execute(f'INSERT INTO qr_codes (qr_id, part_code, part_name, created_at, created_by, is_used, is_downloaded) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
+                                     (qr_id, part_code, part_name, datetime.now(), session.get('username', 'system'), False, False))
+                        new_qr_codes.append(qr_id)
+                    
+                    # Parça bilgilerini güncelle (quantity değil, sadece isim)
+                    cursor.execute(f'UPDATE parts SET part_name = {placeholder} WHERE part_code = {placeholder}',
+                                 (part_name, part_code))
+                    updated_parts.append(part_code)
+                    processing_summary['updated_parts'] += 1
+                    processing_summary['new_qr_codes'] += missing_count
+                    
+                elif needed_quantity < current_qr_count:
+                    # FAZLA QR KODLARI VAR - Sadece uyarı ver, silme!
+                    extra_count = current_qr_count - needed_quantity
+                    print(f"⚠️ {part_code}: {current_qr_count} mevcut > {needed_quantity} hedef = {extra_count} fazla QR (SİLİNMEDİ)")
+                    
+                    # Parça bilgilerini güncelle (quantity yok, sadece isim)
+                    cursor.execute(f'UPDATE parts SET part_name = {placeholder} WHERE part_code = {placeholder}',
+                                 (part_name, part_code))
+                    updated_parts.append(part_code)
+                    processing_summary['updated_parts'] += 1
+                    
+                else:
+                    # TAM UYGUN - Sadece parça bilgilerini güncelle
+                    print(f"✅ {part_code}: {current_qr_count} QR kod zaten uygun")
+                    cursor.execute(f'UPDATE parts SET part_name = {placeholder} WHERE part_code = {placeholder}',
+                                 (part_name, part_code))
+                    
+            else:
+                # YENİ PARÇA - Tamamen yeni QR kodları oluştur
+                print(f"🆕 {part_code}: Yeni parça - {needed_quantity} QR kod oluşturuluyor")
+                
+                cursor.execute(f'INSERT INTO parts (part_code, part_name, description, created_at, created_by, is_active) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
+                             (part_code, part_name, '', datetime.now(), session.get('username', 'system'), True))
+                
+                for i in range(needed_quantity):
+                    qr_id = f"{part_code}-{uuid.uuid4().hex[:8]}"
+                    cursor.execute(f'INSERT INTO qr_codes (qr_id, part_code, part_name, created_at, created_by, is_used, is_downloaded) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})',
+                                 (qr_id, part_code, part_name, datetime.now(), session.get('username', 'system'), False, False))
+                    new_qr_codes.append(qr_id)
+                
+                new_parts.append(part_code)
+                processing_summary['new_parts'] += 1
+                processing_summary['new_qr_codes'] += needed_quantity
         
         conn.commit()
         close_db(conn)
         
+        print(f"\n✅ İŞLEM TAMAMLANDI")
+        print(f"📈 Yeni parçalar: {processing_summary['new_parts']}")
+        print(f"🔄 Güncellenen parçalar: {processing_summary['updated_parts']}")
+        print(f"🆕 Yeni QR kodları: {processing_summary['new_qr_codes']}")
+        print(f"💾 Toplam QR kodları: {processing_summary['existing_qr_codes'] + processing_summary['new_qr_codes']}")
+        print("="*50)
+        
         return jsonify({
             'success': True,
-            'message': f'{len(qr_codes_data)} adet QR kod oluşturuldu',
-            'qr_count': len(qr_codes_data)
+            'message': f'İşlem tamamlandı! {processing_summary["new_qr_codes"]} yeni QR kod oluşturuldu.',
+            'summary': {
+                'new_parts': processing_summary['new_parts'],
+                'updated_parts': processing_summary['updated_parts'], 
+                'new_qr_codes': processing_summary['new_qr_codes'],
+                'total_qr_codes': processing_summary['existing_qr_codes'] + processing_summary['new_qr_codes'],
+                'existing_qr_codes_preserved': processing_summary['existing_qr_codes']
+            }
         })
     
     except Exception as e:
-        # Log full traceback for diagnostics and ensure DB connection is returned to pool
-        logging.exception(f"Error in start_count_internal: {e}")
+        logging.exception(f"Error in smart QR upload system: {e}")
         try:
             close_db(conn)
         except Exception:
             pass
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': f'İşlem sırasında hata oluştu: {str(e)}'}), 500
 
 @app.route('/get_qr_codes')
 @login_required
@@ -1640,27 +1735,11 @@ def verify_count_password():
 @app.route('/get_count_status')
 @login_required
 def get_count_status():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT session_id, status, started_at FROM count_sessions WHERE status = \'active\' LIMIT 1")
-    count_session = cursor.fetchone()
-    close_db(conn)
-    
-    if count_session:
-        return jsonify({
-            'active': True,
-            'session_id': count_session[0],
-            'active_session': {
-                'session_id': count_session[0],
-                'status': count_session[1],
-                'started_at': count_session[2]
-            }
-        })
-    else:
-        return jsonify({
-            'active': False,
-            'active_session': None
-        })
+    # Geçici basit response - sayım sistemi şimdilik kapalı
+    return jsonify({
+        'active': False,
+        'active_session': None
+    })
 
 @app.route('/get_session_stats')
 @login_required
@@ -2221,22 +2300,10 @@ def api_dashboard_stats():
     cursor.execute('SELECT COUNT(*) FROM count_reports')
     total_reports = cursor.fetchone()[0]
     
-    # Aktif sayımlar
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = 'active'")
-    active_counts = cursor.fetchone()[0]
-    
-    # Tamamlanan sayımlar
-    cursor.execute("SELECT COUNT(*) FROM count_sessions WHERE status = 'completed'")
-    completed_counts = cursor.fetchone()[0]
-    
-    # Son sayım bilgisi
-    cursor.execute('''
-        SELECT started_at FROM count_sessions 
-        WHERE status = 'completed' 
-        ORDER BY started_at DESC LIMIT 1
-    ''')
-    last_count = cursor.fetchone()
-    last_count_date = last_count[0] if last_count else None
+    # Sayım bilgileri geçici olarak sıfır
+    active_counts = 0
+    completed_counts = 0
+    last_count_date = None
     
     close_db(conn)
     
@@ -2273,11 +2340,20 @@ def health_check():
         else:
             b2_status = "🏠 LOCAL MODE (B2 Disabled)"
         
+        # Environment durumu kontrolü
+        env_info = {
+            'mode': 'production' if IS_PRODUCTION else 'development',
+            'database_type': 'PostgreSQL' if USE_POSTGRESQL else 'SQLite',
+            'storage_type': 'B2 Cloud' if USE_B2_STORAGE else 'Local Files',
+            'database_url_set': bool(os.environ.get('DATABASE_URL')) if IS_PRODUCTION else 'N/A'
+        }
+        
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
             'database': db_status,
             'storage': b2_status,
+            'environment': env_info,
             'version': '2.0.0'
         })
     except Exception as e:
@@ -2364,4 +2440,4 @@ if __name__ == '__main__':
         print("☁️ Storage: Backblaze B2 Enabled")
         print("🔒 Security: Headers + Rate Limiting Active")
         print()
-        socketio.run(app, host='localhost', port=5002, debug=True)
+        socketio.run(app, host='127.0.0.1', port=5002, debug=True)

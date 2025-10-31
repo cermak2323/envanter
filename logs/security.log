@@ -653,3 +653,117 @@ WHERE envanter_users.username = ?
 2025-10-30 17:25:24,740 - sqlalchemy.engine.Engine - INFO - COMMIT
 2025-10-30 17:25:24,755 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
 2025-10-30 17:25:24,757 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:51:46,778 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:51:46,790 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-31 08:51:46,792 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,794 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:51:46,795 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:51:46,796 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("part_codes")
+2025-10-31 08:51:46,797 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,797 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("part_codes")
+2025-10-31 08:51:46,797 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,801 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("qr_codes")
+2025-10-31 08:51:46,802 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,803 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("count_sessions")
+2025-10-31 08:51:46,803 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,805 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("scanned_qr")
+2025-10-31 08:51:46,805 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,807 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("envanter_users")
+2025-10-31 08:51:46,807 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,808 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("count_passwords")
+2025-10-31 08:51:46,809 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:46,810 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE part_codes (
+	id INTEGER NOT NULL, 
+	part_code VARCHAR(50) NOT NULL, 
+	part_name VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	created_at DATETIME, 
+	updated_at DATETIME, 
+	PRIMARY KEY (id)
+)
+
+
+2025-10-31 08:51:46,810 - sqlalchemy.engine.Engine - INFO - [no key 0.00112s] ()
+2025-10-31 08:51:46,818 - sqlalchemy.engine.Engine - INFO - CREATE UNIQUE INDEX ix_part_codes_part_code ON part_codes (part_code)
+2025-10-31 08:51:46,819 - sqlalchemy.engine.Engine - INFO - [no key 0.00123s] ()
+2025-10-31 08:51:46,824 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-10-31 08:51:46,841 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:51:46,850 - sqlalchemy.engine.Engine - INFO - SELECT envanter_users.id AS envanter_users_id, envanter_users.username AS envanter_users_username, envanter_users.password AS envanter_users_password, envanter_users.password_hash AS envanter_users_password_hash, envanter_users.full_name AS envanter_users_full_name, envanter_users.role AS envanter_users_role, envanter_users.created_at AS envanter_users_created_at, envanter_users.real_name AS envanter_users_real_name, envanter_users.email AS envanter_users_email, envanter_users.job_title AS envanter_users_job_title, envanter_users.title AS envanter_users_title, envanter_users.work_position AS envanter_users_work_position, envanter_users.user_group AS envanter_users_user_group, envanter_users.user_role AS envanter_users_user_role, envanter_users.signature_path AS envanter_users_signature_path, envanter_users.profile_image_path AS envanter_users_profile_image_path, envanter_users.is_active_user AS envanter_users_is_active_user, envanter_users.can_mark_used AS envanter_users_can_mark_used, envanter_users.email_2fa_enabled AS envanter_users_email_2fa_enabled, envanter_users.email_2fa_code AS envanter_users_email_2fa_code, envanter_users.email_2fa_expires AS envanter_users_email_2fa_expires, envanter_users.email_2fa_attempts AS envanter_users_email_2fa_attempts, envanter_users.email_2fa_locked_until AS envanter_users_email_2fa_locked_until, envanter_users.tc_number AS envanter_users_tc_number, envanter_users.last_password_change AS envanter_users_last_password_change, envanter_users.force_password_change AS envanter_users_force_password_change, envanter_users.force_tutorial AS envanter_users_force_tutorial, envanter_users.first_login_completed AS envanter_users_first_login_completed, envanter_users.last_login AS envanter_users_last_login, envanter_users.terms_accepted AS envanter_users_terms_accepted, envanter_users.updated_at AS envanter_users_updated_at 
+FROM envanter_users 
+WHERE envanter_users.username = ?
+ LIMIT ? OFFSET ?
+2025-10-31 08:51:46,850 - sqlalchemy.engine.Engine - INFO - [generated in 0.00157s] ('admin', 1, 0)
+2025-10-31 08:51:46,852 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:51:46,903 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:51:53,001 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:51:53,001 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-31 08:51:53,002 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:51:53,002 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:51:53,019 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:51:53,023 - sqlalchemy.engine.Engine - INFO - SELECT envanter_users.id AS envanter_users_id, envanter_users.username AS envanter_users_username, envanter_users.password AS envanter_users_password, envanter_users.password_hash AS envanter_users_password_hash, envanter_users.full_name AS envanter_users_full_name, envanter_users.role AS envanter_users_role, envanter_users.created_at AS envanter_users_created_at, envanter_users.real_name AS envanter_users_real_name, envanter_users.email AS envanter_users_email, envanter_users.job_title AS envanter_users_job_title, envanter_users.title AS envanter_users_title, envanter_users.work_position AS envanter_users_work_position, envanter_users.user_group AS envanter_users_user_group, envanter_users.user_role AS envanter_users_user_role, envanter_users.signature_path AS envanter_users_signature_path, envanter_users.profile_image_path AS envanter_users_profile_image_path, envanter_users.is_active_user AS envanter_users_is_active_user, envanter_users.can_mark_used AS envanter_users_can_mark_used, envanter_users.email_2fa_enabled AS envanter_users_email_2fa_enabled, envanter_users.email_2fa_code AS envanter_users_email_2fa_code, envanter_users.email_2fa_expires AS envanter_users_email_2fa_expires, envanter_users.email_2fa_attempts AS envanter_users_email_2fa_attempts, envanter_users.email_2fa_locked_until AS envanter_users_email_2fa_locked_until, envanter_users.tc_number AS envanter_users_tc_number, envanter_users.last_password_change AS envanter_users_last_password_change, envanter_users.force_password_change AS envanter_users_force_password_change, envanter_users.force_tutorial AS envanter_users_force_tutorial, envanter_users.first_login_completed AS envanter_users_first_login_completed, envanter_users.last_login AS envanter_users_last_login, envanter_users.terms_accepted AS envanter_users_terms_accepted, envanter_users.updated_at AS envanter_users_updated_at 
+FROM envanter_users 
+WHERE envanter_users.username = ?
+ LIMIT ? OFFSET ?
+2025-10-31 08:51:53,023 - sqlalchemy.engine.Engine - INFO - [generated in 0.00118s] ('admin', 1, 0)
+2025-10-31 08:51:53,023 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:51:53,038 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:51:53,048 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 08:52:06,212 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 08:52:06,537 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:52:13,388 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:52:13,388 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-31 08:52:13,396 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:52:13,396 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:52:13,403 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:52:13,416 - sqlalchemy.engine.Engine - INFO - SELECT envanter_users.id AS envanter_users_id, envanter_users.username AS envanter_users_username, envanter_users.password AS envanter_users_password, envanter_users.password_hash AS envanter_users_password_hash, envanter_users.full_name AS envanter_users_full_name, envanter_users.role AS envanter_users_role, envanter_users.created_at AS envanter_users_created_at, envanter_users.real_name AS envanter_users_real_name, envanter_users.email AS envanter_users_email, envanter_users.job_title AS envanter_users_job_title, envanter_users.title AS envanter_users_title, envanter_users.work_position AS envanter_users_work_position, envanter_users.user_group AS envanter_users_user_group, envanter_users.user_role AS envanter_users_user_role, envanter_users.signature_path AS envanter_users_signature_path, envanter_users.profile_image_path AS envanter_users_profile_image_path, envanter_users.is_active_user AS envanter_users_is_active_user, envanter_users.can_mark_used AS envanter_users_can_mark_used, envanter_users.email_2fa_enabled AS envanter_users_email_2fa_enabled, envanter_users.email_2fa_code AS envanter_users_email_2fa_code, envanter_users.email_2fa_expires AS envanter_users_email_2fa_expires, envanter_users.email_2fa_attempts AS envanter_users_email_2fa_attempts, envanter_users.email_2fa_locked_until AS envanter_users_email_2fa_locked_until, envanter_users.tc_number AS envanter_users_tc_number, envanter_users.last_password_change AS envanter_users_last_password_change, envanter_users.force_password_change AS envanter_users_force_password_change, envanter_users.force_tutorial AS envanter_users_force_tutorial, envanter_users.first_login_completed AS envanter_users_first_login_completed, envanter_users.last_login AS envanter_users_last_login, envanter_users.terms_accepted AS envanter_users_terms_accepted, envanter_users.updated_at AS envanter_users_updated_at 
+FROM envanter_users 
+WHERE envanter_users.username = ?
+ LIMIT ? OFFSET ?
+2025-10-31 08:52:13,416 - sqlalchemy.engine.Engine - INFO - [generated in 0.00153s] ('admin', 1, 0)
+2025-10-31 08:52:13,416 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:52:13,430 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:52:13,438 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 08:52:49,880 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 08:52:50,165 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:52:52,168 - root - ERROR - DSN validation failed: Invalid port in DSN: None
+2025-10-31 08:53:55,651 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:53:55,651 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-31 08:53:55,651 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:53:55,651 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:53:55,669 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:53:55,675 - sqlalchemy.engine.Engine - INFO - SELECT envanter_users.id AS envanter_users_id, envanter_users.username AS envanter_users_username, envanter_users.password AS envanter_users_password, envanter_users.password_hash AS envanter_users_password_hash, envanter_users.full_name AS envanter_users_full_name, envanter_users.role AS envanter_users_role, envanter_users.created_at AS envanter_users_created_at, envanter_users.real_name AS envanter_users_real_name, envanter_users.email AS envanter_users_email, envanter_users.job_title AS envanter_users_job_title, envanter_users.title AS envanter_users_title, envanter_users.work_position AS envanter_users_work_position, envanter_users.user_group AS envanter_users_user_group, envanter_users.user_role AS envanter_users_user_role, envanter_users.signature_path AS envanter_users_signature_path, envanter_users.profile_image_path AS envanter_users_profile_image_path, envanter_users.is_active_user AS envanter_users_is_active_user, envanter_users.can_mark_used AS envanter_users_can_mark_used, envanter_users.email_2fa_enabled AS envanter_users_email_2fa_enabled, envanter_users.email_2fa_code AS envanter_users_email_2fa_code, envanter_users.email_2fa_expires AS envanter_users_email_2fa_expires, envanter_users.email_2fa_attempts AS envanter_users_email_2fa_attempts, envanter_users.email_2fa_locked_until AS envanter_users_email_2fa_locked_until, envanter_users.tc_number AS envanter_users_tc_number, envanter_users.last_password_change AS envanter_users_last_password_change, envanter_users.force_password_change AS envanter_users_force_password_change, envanter_users.force_tutorial AS envanter_users_force_tutorial, envanter_users.first_login_completed AS envanter_users_first_login_completed, envanter_users.last_login AS envanter_users_last_login, envanter_users.terms_accepted AS envanter_users_terms_accepted, envanter_users.updated_at AS envanter_users_updated_at 
+FROM envanter_users 
+WHERE envanter_users.username = ?
+ LIMIT ? OFFSET ?
+2025-10-31 08:53:55,676 - sqlalchemy.engine.Engine - INFO - [generated in 0.00139s] ('admin', 1, 0)
+2025-10-31 08:53:55,678 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:53:55,692 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:53:57,605 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:53:57,605 - sqlalchemy.engine.Engine - INFO - SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2025-10-31 08:53:57,605 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-10-31 08:53:57,605 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:53:57,618 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-10-31 08:53:57,629 - sqlalchemy.engine.Engine - INFO - SELECT envanter_users.id AS envanter_users_id, envanter_users.username AS envanter_users_username, envanter_users.password AS envanter_users_password, envanter_users.password_hash AS envanter_users_password_hash, envanter_users.full_name AS envanter_users_full_name, envanter_users.role AS envanter_users_role, envanter_users.created_at AS envanter_users_created_at, envanter_users.real_name AS envanter_users_real_name, envanter_users.email AS envanter_users_email, envanter_users.job_title AS envanter_users_job_title, envanter_users.title AS envanter_users_title, envanter_users.work_position AS envanter_users_work_position, envanter_users.user_group AS envanter_users_user_group, envanter_users.user_role AS envanter_users_user_role, envanter_users.signature_path AS envanter_users_signature_path, envanter_users.profile_image_path AS envanter_users_profile_image_path, envanter_users.is_active_user AS envanter_users_is_active_user, envanter_users.can_mark_used AS envanter_users_can_mark_used, envanter_users.email_2fa_enabled AS envanter_users_email_2fa_enabled, envanter_users.email_2fa_code AS envanter_users_email_2fa_code, envanter_users.email_2fa_expires AS envanter_users_email_2fa_expires, envanter_users.email_2fa_attempts AS envanter_users_email_2fa_attempts, envanter_users.email_2fa_locked_until AS envanter_users_email_2fa_locked_until, envanter_users.tc_number AS envanter_users_tc_number, envanter_users.last_password_change AS envanter_users_last_password_change, envanter_users.force_password_change AS envanter_users_force_password_change, envanter_users.force_tutorial AS envanter_users_force_tutorial, envanter_users.first_login_completed AS envanter_users_first_login_completed, envanter_users.last_login AS envanter_users_last_login, envanter_users.terms_accepted AS envanter_users_terms_accepted, envanter_users.updated_at AS envanter_users_updated_at 
+FROM envanter_users 
+WHERE envanter_users.username = ?
+ LIMIT ? OFFSET ?
+2025-10-31 08:53:57,631 - sqlalchemy.engine.Engine - INFO - [generated in 0.00174s] ('admin', 1, 0)
+2025-10-31 08:53:57,632 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2025-10-31 08:53:57,646 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:53:57,651 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 08:55:12,697 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 08:55:13,027 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:56:04,209 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:56:06,371 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:56:06,371 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 08:56:29,681 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör\\EnvanterQR\\EnvanterQR\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-31 08:56:30,031 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:56:32,522 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:56:32,529 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 08:56:42,087 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:56:44,217 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:56:44,222 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-31 08:59:55,575 - werkzeug - INFO -  * Restarting with stat
+2025-10-31 08:59:57,709 - werkzeug - WARNING -  * Debugger is active!
+2025-10-31 08:59:57,716 - werkzeug - INFO -  * Debugger PIN: 527-412-432

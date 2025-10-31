@@ -21,7 +21,19 @@ import secrets
 import random
 import string
 from dotenv import load_dotenv
-from b2_storage import get_b2_service
+
+# Environment-aware imports
+try:
+    if os.environ.get('RENDER'):  # Sadece production'da B2 import et
+        from b2_storage import get_b2_service
+        print("☁️ B2 Storage module imported (PRODUCTION)")
+    else:
+        print("🏠 B2 Storage skipped (LOCAL DEVELOPMENT)")
+        get_b2_service = None
+except ImportError:
+    print("⚠️ B2 Storage module not available")
+    get_b2_service = None
+
 import logging
 import threading
 import json
@@ -62,11 +74,31 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Ortama göre SQLAlchemy config'ini seç
-if os.environ.get('RENDER'):
+# Ortama göre dual-mode sistem seç
+IS_PRODUCTION = bool(os.environ.get('RENDER'))
+IS_LOCAL = not IS_PRODUCTION
+
+print(f"\n🔧 DUAL-MODE SİSTEM")
+print(f"📍 Production (Render): {IS_PRODUCTION}")
+print(f"🏠 Local (Development): {IS_LOCAL}")
+
+if IS_PRODUCTION:
+    # PRODUCTION: PostgreSQL + B2 Storage (KALICI)
     app.config.from_object(ProductionConfig)
+    print("☁️ Production Mode: PostgreSQL + B2 Storage (KALICI)")
+    USE_B2_STORAGE = True
+    USE_POSTGRESQL = True
 else:
+    # LOCAL: SQLite + Local Storage (GEÇİCİ)
     app.config.from_object(DevelopmentConfig)
+    print("🏠 Local Mode: SQLite + Local Storage (GEÇİCİ)")
+    USE_B2_STORAGE = False
+    USE_POSTGRESQL = False
+
+print(f"💾 Database: {'PostgreSQL' if USE_POSTGRESQL else 'SQLite'}")
+print(f"📁 Storage: {'B2 Cloud' if USE_B2_STORAGE else 'Local Files'}")
+print(f"🔄 Data: {'KALICI' if IS_PRODUCTION else 'GEÇİCİ'}")
+print("="*60)
 
 # SQLAlchemy'yi app'e bağla
 db.init_app(app)
@@ -260,40 +292,23 @@ else:
     _db_url = _raw_db_url
 
 
-# Prefer environment-provided DB URLs; fall back to the new cermak_envanter database
-# Note: for security, set the full DATABASE_URL or RENDER_INTERNAL_DATABASE_URL in the environment
-DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('RENDER_INTERNAL_DATABASE_URL') or \
-    "postgresql://cermak_envanter_user:N22HyFcRf3bvgMzkK1J5yNYgrXEfIgNC@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter?sslmode=require"
+# DUAL-MODE DATABASE CONFIGURATION
+if USE_POSTGRESQL:
+    # PRODUCTION: PostgreSQL (KALICI)
+    DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('RENDER_INTERNAL_DATABASE_URL') or \
+        "postgresql://cermak_envanter_user:N22HyFcRf3bvgMzkK1J5yNYgrXEfIgNC@dpg-d41mgsje5dus73df6o40-a.oregon-postgres.render.com:5432/cermak_envanter?sslmode=require"
+    print(f"☁️ Production PostgreSQL: {DATABASE_URL[:50]}...")
+else:
+    # LOCAL: SQLite (GEÇİCİ)
+    DATABASE_URL = app.config['SQLALCHEMY_DATABASE_URI']
+    print(f"🏠 Local SQLite: {DATABASE_URL}")
 
-# Debug: Print the DATABASE_URL from environment
-print(f"DEBUG: Environment DATABASE_URL = {os.environ.get('DATABASE_URL')}")
+print(f"💾 Active Database URL: {DATABASE_URL[:100]}...")
 
-# Connection Pool
+# Connection Pool (PostgreSQL için)
 db_pool = None
 
-# If a local `config.py` exists (from your other system), load and apply defaults from it
-try:
-    import config as local_config
-    # Only set values that are not already configured from environment/earlier logic
-    for name in [
-        'SQLALCHEMY_ENGINE_OPTIONS', 'COMPRESS_MIMETYPES', 'COMPRESS_LEVEL', 'COMPRESS_MIN_SIZE',
-        'BASE_URL', 'BASE_DIR', 'UPLOAD_FOLDER', 'DOCUMENTS_FOLDER', 'PHOTOS_FOLDER',
-        'QR_CODES_FOLDER', 'QR_CODE_FOLDER'
-    ]:
-        if not globals().get(name) and hasattr(local_config, name):
-            globals()[name] = getattr(local_config, name)
-
-    # If running on Render and render internal URL is available in config, prefer it
-    if os.environ.get('RENDER'):
-        render_internal = getattr(local_config, 'RENDER_INTERNAL_DATABASE_URL', None)
-        if render_internal:
-            DATABASE_URL = render_internal
-    # If DATABASE_URL still missing but config provides one, use it
-    if (not DATABASE_URL or DATABASE_URL.startswith('sqlite:')) and getattr(local_config, 'DATABASE_URL', None):
-        DATABASE_URL = getattr(local_config, 'DATABASE_URL')
-except Exception:
-    # No local config or failed to import — continue using env / defaults
-    pass
+# Skip old config loading for dual-mode system
 
 def validate_dsn(dsn):
     """Validate the DSN string and ensure the port is an integer."""
@@ -307,10 +322,15 @@ def validate_dsn(dsn):
         logging.error(f"DSN validation failed: {e}")
         return False
 
-# Update init_db_pool to validate DSN before initializing the pool
 def init_db_pool():
-    """Initialize database connection pool"""
+    """Initialize database connection pool (PostgreSQL only)"""
     global db_pool
+    
+    if not USE_POSTGRESQL:
+        print("🏠 Local SQLite mode - No connection pool needed")
+        return
+        
+    # PRODUCTION: PostgreSQL connection pool
     try:
         # Debug: show which DSN we will use (mask password)
         try:
@@ -326,26 +346,23 @@ def init_db_pool():
                     _masked = parts[0] + '//' + cred + '@' + rest
         except Exception:
             _masked = '<unavailable>'
-        print(f"Initializing DB pool with DSN: {_masked}")
-
-        # Debug: Print the DATABASE_URL before validation
-        print(f"DEBUG: DATABASE_URL = {DATABASE_URL}")
+        print(f"☁️ Initializing PostgreSQL pool: {_masked}")
 
         # Validate DSN before proceeding
         if not validate_dsn(DATABASE_URL):
             raise ValueError("Invalid DATABASE_URL. Check the DSN format and port.")
 
-        # Production ortamı için optimize edilmiş pool ayarları
+        # Production PostgreSQL pool ayarları
         db_pool = SimpleConnectionPool(
-            minconn=2,  # Minimum bağlantı sayısı artırıldı
-            maxconn=15, # Maximum bağlantı sayısı artırıldı
+            minconn=2,  # Minimum bağlantı sayısı
+            maxconn=15, # Maximum bağlantı sayısı
             dsn=DATABASE_URL
         )
         print("✅ PostgreSQL connection pool initialized successfully")
-        print("DEBUG: db_pool initialized with minconn=2, maxconn=15")
+        print("📊 Pool settings: minconn=2, maxconn=15")
     except Exception as e:
         import traceback
-        print(f"❌ Failed to initialize database pool: {e}")
+        print(f"❌ Failed to initialize PostgreSQL pool: {e}")
         traceback.print_exc()
         raise
 
@@ -378,56 +395,75 @@ print(f"DEBUG: ADMIN_COUNT_PASSWORD = '{ADMIN_COUNT_PASSWORD}'")  # DEBUG
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
 def get_db():
-    """Get database connection from pool"""
-    try:
-        # Try to get a connection from the pool
-        conn = db_pool.getconn()
-
-        # Validate that the connection is open. psycopg2 connection has
-        # a .closed attribute (0 means open). If it's closed, discard and get a new one.
+    """Get database connection - dual mode (PostgreSQL pool vs SQLite direct)"""
+    
+    if USE_POSTGRESQL:
+        # PRODUCTION: PostgreSQL from pool
         try:
-            if getattr(conn, 'closed', 1):
-                # Return the closed connection (ask pool to close it) and get another
-                try:
-                    db_pool.putconn(conn, close=True)
-                except Exception:
-                    pass
-                conn = db_pool.getconn()
-
-        except Exception:
-            # If any validation check fails, attempt to use the connection anyway
-            pass
-
-        return conn
-    except Exception as e:
-        # Try to reinitialize pool once in case connections were dropped server-side
-        try:
-            logging.warning(f"Database pool error, attempting to reinitialize pool: {e}")
-            init_db_pool()
+            # Try to get a connection from the pool
             conn = db_pool.getconn()
-            return conn
-        except Exception as e2:
-            logging.error(f"Failed to get DB connection after reinit: {e2}")
-            raise
 
-def close_db(conn):
-    """Return connection to pool"""
-    try:
-        if conn:
-            # If connection is already closed at the libpq level, tell the pool to close it
+            # Validate that the connection is open. psycopg2 connection has
+            # a .closed attribute (0 means open). If it's closed, discard and get a new one.
             try:
                 if getattr(conn, 'closed', 1):
-                    db_pool.putconn(conn, close=True)
-                else:
-                    db_pool.putconn(conn)
-            except TypeError:
-                # Older psycopg2 versions may not accept close kwarg; fallback
+                    # Return the closed connection (ask pool to close it) and get another
+                    try:
+                        db_pool.putconn(conn, close=True)
+                    except Exception:
+                        pass
+                    conn = db_pool.getconn()
+
+            except Exception:
+                # If any validation check fails, attempt to use the connection anyway
+                pass
+
+            return conn
+        except Exception as e:
+            # Try to reinitialize pool once in case connections were dropped server-side
+            try:
+                logging.warning(f"PostgreSQL pool error, attempting to reinitialize pool: {e}")
+                init_db_pool()
+                conn = db_pool.getconn()
+                return conn
+            except Exception as e2:
+                logging.error(f"Failed to get PostgreSQL connection after reinit: {e2}")
+                raise
+    else:
+        # LOCAL: SQLite direct connection (GEÇİCİ)
+        import sqlite3
+        conn = sqlite3.connect(DATABASE_URL.replace('sqlite:///', ''))
+        conn.row_factory = sqlite3.Row  # Dict-like access
+        return conn
+
+def close_db(conn):
+    """Return connection to pool (PostgreSQL) or close (SQLite)"""
+    
+    if USE_POSTGRESQL:
+        # PRODUCTION: Return to PostgreSQL pool
+        try:
+            if conn:
+                # If connection is already closed at the libpq level, tell the pool to close it
                 try:
-                    db_pool.putconn(conn)
-                except Exception:
-                    pass
-    except Exception as e:
-        logging.error(f"❌ Error returning connection to pool: {e}")
+                    if getattr(conn, 'closed', 1):
+                        db_pool.putconn(conn, close=True)
+                    else:
+                        db_pool.putconn(conn)
+                except TypeError:
+                    # Older psycopg2 versions may not accept close kwarg; fallback
+                    try:
+                        db_pool.putconn(conn)
+                    except Exception:
+                        pass
+        except Exception as e:
+            logging.error(f"Error returning PostgreSQL connection to pool: {e}")
+    else:
+        # LOCAL: Close SQLite connection
+        try:
+            if conn:
+                conn.close()
+        except Exception as e:
+            logging.error(f"Error closing SQLite connection: {e}")
 
 def create_performance_indexes(cursor):
     """Performans için kritik indexleri oluştur"""
@@ -471,38 +507,63 @@ def init_db():
     """
     try:
         with app.app_context():
-            # Tablolar var mı kontrol et
-            inspector = db.inspect(db.engine)
-            existing_tables = inspector.get_table_names()
-            required_tables = ['users', 'part_codes', 'qr_codes', 'count_sessions', 'count_passwords', 'scanned_qr']
-            
-            missing_tables = [t for t in required_tables if t not in existing_tables]
-            
-            if missing_tables:
-                print(f"📋 Creating missing tables: {', '.join(missing_tables)}")
-                db.create_all()
-                print("✅ All database tables created successfully")
+            if USE_POSTGRESQL:
+                # PRODUCTION: PostgreSQL - SQLAlchemy ile
+                inspector = db.inspect(db.engine)
+                existing_tables = inspector.get_table_names()
+                required_tables = ['users', 'part_codes', 'qr_codes', 'count_sessions', 'count_passwords', 'scanned_qr']
+                
+                missing_tables = [t for t in required_tables if t not in existing_tables]
+                
+                if missing_tables:
+                    print(f"☁️ Creating missing PostgreSQL tables: {', '.join(missing_tables)}")
+                    db.create_all()
+                    print("✅ PostgreSQL tables created successfully")
+                else:
+                    print("✅ PostgreSQL tables already exist")
+                
+                # SQLAlchemy User model kullan
+                admin_user = User.query.filter_by(username='admin').first()
+                if not admin_user:
+                    print("➕ Creating default PostgreSQL admin user...")
+                    admin_password = hashlib.sha256("admin123".encode()).hexdigest()
+                    admin = User(
+                        username='admin',
+                        full_name='Administrator',
+                        password_hash=admin_password,
+                        role='admin',
+                        is_active_user=True
+                    )
+                    db.session.add(admin)
+                    db.session.commit()
+                    print("✅ PostgreSQL admin user created (admin/admin123)")
+                    
             else:
-                print("✅ All database tables already exist")
-            
-            # Default admin user var mı kontrol et
-            admin_user = User.query.filter_by(username='admin').first()
-            if not admin_user:
-                print("➕ Creating default admin user...")
-                admin_password = hashlib.sha256("admin123".encode()).hexdigest()
-                admin = User(
-                    username='admin',
-                    full_name='Administrator',
-                    password_hash=admin_password,
-                    role='admin',
-                    is_active_user=True
-                )
-                db.session.add(admin)
-                db.session.commit()
-                print("✅ Default admin user created (admin/admin123)")
-                print("⚠️  CHANGE THIS PASSWORD IN PRODUCTION!")
-            else:
-                print("✅ Admin user already exists")
+                # LOCAL: SQLite - Raw SQL ile (basit tablo yapısı)
+                print("🏠 Local SQLite mode - checking simple table structure")
+                
+                # SQLite bağlantısı al
+                conn = get_db()
+                cursor = conn.cursor()
+                
+                # Admin user var mı kontrol et (SQLite raw SQL)
+                cursor.execute("SELECT * FROM envanter_users WHERE username = 'admin'")
+                admin_exists = cursor.fetchone()
+                
+                if not admin_exists:
+                    print("➕ Creating default SQLite admin user...")
+                    admin_password_hash = hashlib.sha256("admin123".encode()).hexdigest()
+                    cursor.execute('''
+                        INSERT INTO envanter_users (username, password_hash, role, created_at, is_active)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', ('admin', admin_password_hash, 'admin', datetime.now(), 1))
+                    conn.commit()
+                    print("✅ SQLite admin user created (admin/admin123)")
+                else:
+                    print("✅ SQLite admin user already exists")
+                
+                close_db(conn)
+                print("✅ SQLite database initialized successfully")
             
             return True
             
@@ -834,20 +895,33 @@ def upload_parts():
         conn = get_db()
         cursor = conn.cursor()
         
-        # Mevcut QR kodları için B2'den dosyaları sil
-        try:
-            b2_service = get_b2_service()
-            cursor.execute('SELECT qr_id FROM qr_codes')
-            existing_qr_codes = cursor.fetchall()
-            
-            for row in existing_qr_codes:
-                qr_id = row[0]
-                file_path = f'qr_codes/{qr_id}.png'
-                b2_service.delete_file(file_path)
-                logging.info(f"Deleted QR code from B2: {file_path}")
+        # Mevcut QR kodları için dosyaları sil
+        if USE_B2_STORAGE and get_b2_service:
+            # PRODUCTION: B2'den dosyaları sil (KALICI)
+            try:
+                b2_service = get_b2_service()
+                cursor.execute('SELECT qr_id FROM qr_codes')
+                existing_qr_codes = cursor.fetchall()
                 
-        except Exception as e:
-            logging.error(f"Error deleting QR codes from B2: {e}")
+                for row in existing_qr_codes:
+                    qr_id = row[0]
+                    file_path = f'qr_codes/{qr_id}.png'
+                    b2_service.delete_file(file_path)
+                    logging.info(f"Deleted QR code from B2: {file_path}")
+                    
+            except Exception as e:
+                logging.error(f"Error deleting QR codes from B2: {e}")
+        else:
+            # LOCAL: Static dosyaları sil (GEÇİCİ)
+            try:
+                qr_dir = os.path.join('static', 'qrcodes')
+                if os.path.exists(qr_dir):
+                    for filename in os.listdir(qr_dir):
+                        if filename.endswith('.png'):
+                            os.remove(os.path.join(qr_dir, filename))
+                            logging.info(f"Deleted local QR code: {filename}")
+            except Exception as e:
+                logging.error(f"Error deleting local QR codes: {e}")
         
         cursor.execute('DELETE FROM parts')
         cursor.execute('DELETE FROM qr_codes')
@@ -997,7 +1071,7 @@ def mark_qr_used():
 @app.route('/generate_qr_image/<qr_id>')
 @login_required
 def generate_qr_image(qr_id):
-    """Optimize edilmiş QR kod oluşturma - cache + B2 storage"""
+    """Dual-mode QR kod oluşturma: Local (geçici) vs Production (kalıcı)"""
     try:
         # Cache'den kontrol et
         cache_key = f'qr_image_{qr_id}'
@@ -1007,48 +1081,68 @@ def generate_qr_image(qr_id):
             buf = BytesIO(cached_image)
             return send_file(buf, mimetype='image/png')
         
-        # B2'den QR kod'u indir
-        b2_service = get_b2_service()
-        file_path = f'qr_codes/{qr_id}.png'
-        
-        # B2'den dosyayı kontrol et
-        file_content = b2_service.download_file(file_path)
-        
-        if file_content:
-            # B2'den var olan dosyayı cache'e kaydet ve döndür
-            cache_set(cache_key, file_content)
-            buf = BytesIO(file_content)
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png')
+        if USE_B2_STORAGE and get_b2_service:
+            # PRODUCTION: B2'den QR kod'u indir
+            b2_service = get_b2_service()
+            file_path = f'qr_codes/{qr_id}.png'
+            
+            # B2'den dosyayı kontrol et
+            file_content = b2_service.download_file(file_path)
+            
+            if file_content:
+                # B2'den var olan dosyayı cache'e kaydet ve döndür
+                cache_set(cache_key, file_content)
+                buf = BytesIO(file_content)
+                buf.seek(0)
+                return send_file(buf, mimetype='image/png')
         else:
-            # QR kod yoksa oluştur - optimize edilmiş ayarlar
-            qr = qrcode.QRCode(
-                version=1, 
-                box_size=8,  # Küçültüldü
-                border=2,    # Küçültüldü
-                error_correction=qrcode.constants.ERROR_CORRECT_L  # Minimum hata düzeltme
-            )
-            qr.add_data(qr_id)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            buf = BytesIO()
-            img.save(buf, format='PNG', optimize=True)  # Optimize edilmiş PNG
-            buf.seek(0)
-            
-            # Cache'e kaydet
-            img_data = buf.getvalue()
-            cache_set(cache_key, img_data)
-            
-            # B2'ye async upload (background'da)
+            # LOCAL: Static dosyadan kontrol et
+            static_path = os.path.join('static', 'qrcodes', f'{qr_id}.png')
+            if os.path.exists(static_path):
+                with open(static_path, 'rb') as f:
+                    file_content = f.read()
+                cache_set(cache_key, file_content)
+                buf = BytesIO(file_content)
+                return send_file(buf, mimetype='image/png')
+        
+        # QR kod yoksa oluştur - optimize edilmiş ayarlar
+        qr = qrcode.QRCode(
+            version=1, 
+            box_size=8,  # Küçültüldü
+            border=2,    # Küçültüldü
+            error_correction=qrcode.constants.ERROR_CORRECT_L  # Minimum hata düzeltme
+        )
+        qr.add_data(qr_id)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buf = BytesIO()
+        img.save(buf, format='PNG', optimize=True)  # Optimize edilmiş PNG
+        buf.seek(0)
+        
+        # Cache'e kaydet
+        img_data = buf.getvalue()
+        cache_set(cache_key, img_data)
+        
+        if USE_B2_STORAGE and get_b2_service:
+            # PRODUCTION: B2'ye async upload (KALICI)
+            b2_service = get_b2_service()
+            file_path = f'qr_codes/{qr_id}.png'
             threading.Thread(
                 target=lambda: b2_service.upload_file(file_path, img_data, 'image/png'),
                 daemon=True
             ).start()
-            
-            # Dosyayı döndür
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png')
+        else:
+            # LOCAL: Static klasörüne kaydet (GEÇİCİ)
+            qr_dir = os.path.join('static', 'qrcodes')
+            os.makedirs(qr_dir, exist_ok=True)
+            local_path = os.path.join(qr_dir, f'{qr_id}.png')
+            with open(local_path, 'wb') as f:
+                f.write(img_data)
+        
+        # Dosyayı döndür
+        buf.seek(0)
+        return send_file(buf, mimetype='image/png')
             
     except Exception as e:
         logging.error(f"Error generating QR image for {qr_id}: {e}")
@@ -1082,38 +1176,55 @@ def download_single_qr(qr_id):
     close_db(conn)
     
     try:
-        # B2'den QR kod'u indir
-        b2_service = get_b2_service()
-        file_path = f'qr_codes/{qr_id}.png'
-        
-        file_content = b2_service.download_file(file_path)
-        
-        if file_content:
-            # B2'den var olan dosyayı döndür
-            buf = BytesIO(file_content)
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
+        if USE_B2_STORAGE and get_b2_service:
+            # PRODUCTION: B2'den QR kod'u indir (KALICI)
+            b2_service = get_b2_service()
+            file_path = f'qr_codes/{qr_id}.png'
+            
+            file_content = b2_service.download_file(file_path)
+            
+            if file_content:
+                # B2'den var olan dosyayı döndür
+                buf = BytesIO(file_content)
+                buf.seek(0)
+                return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
         else:
-            # QR kod yoksa oluştur ve B2'ye yükle
-            qr = qrcode.QRCode(version=1, box_size=10, border=4)
-            qr.add_data(qr_id)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            buf = BytesIO()
-            img.save(buf, format='PNG')
-            buf.seek(0)
-            
-            # B2'ye yükle
-            img_data = buf.getvalue()
+            # LOCAL: Static dosyadan kontrol et (GEÇİCİ)
+            static_path = os.path.join('static', 'qrcodes', f'{qr_id}.png')
+            if os.path.exists(static_path):
+                return send_file(static_path, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
+        
+        # QR kod yoksa oluştur
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(qr_id)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        buf = BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        
+        img_data = buf.getvalue()
+        
+        if USE_B2_STORAGE and get_b2_service:
+            # PRODUCTION: B2'ye yükle (KALICI)
+            b2_service = get_b2_service()
+            file_path = f'qr_codes/{qr_id}.png'
             upload_result = b2_service.upload_file(file_path, img_data, 'image/png')
             
             if upload_result['success']:
                 logging.info(f"QR code uploaded to B2: {file_path}")
-            
-            # Dosyayı döndür
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
+        else:
+            # LOCAL: Static klasörüne kaydet (GEÇİCİ)
+            qr_dir = os.path.join('static', 'qrcodes')
+            os.makedirs(qr_dir, exist_ok=True)
+            local_path = os.path.join(qr_dir, f'{qr_id}.png')
+            with open(local_path, 'wb') as f:
+                f.write(img_data)
+        
+        # Dosyayı döndür
+        buf.seek(0)
+        return send_file(buf, mimetype='image/png', as_attachment=True, download_name=f'{qr_id}.png')
             
     except Exception as e:
         logging.error(f"Error downloading QR image for {qr_id}: {e}")
@@ -1348,7 +1459,6 @@ def download_all_qr():
     close_db(conn)
     
     memory_file = BytesIO()
-    b2_service = get_b2_service()
     
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for row in qr_codes:
@@ -1357,14 +1467,24 @@ def download_all_qr():
             file_path = f'qr_codes/{qr_id}.png'
             
             try:
-                # B2'den QR kod'u indir
-                file_content = b2_service.download_file(file_path)
+                file_content = None
+                
+                if USE_B2_STORAGE and get_b2_service:
+                    # PRODUCTION: B2'den QR kod'u indir (KALICI)
+                    b2_service = get_b2_service()
+                    file_content = b2_service.download_file(file_path)
+                else:
+                    # LOCAL: Static dosyadan kontrol et (GEÇİCİ)
+                    static_path = os.path.join('static', 'qrcodes', f'{qr_id}.png')
+                    if os.path.exists(static_path):
+                        with open(static_path, 'rb') as f:
+                            file_content = f.read()
                 
                 if file_content:
-                    # B2'den var olan dosyayı kullan
+                    # Var olan dosyayı kullan
                     zipf.writestr(f'{part_code}_{qr_id}.png', file_content)
                 else:
-                    # QR kod yoksa oluştur ve B2'ye yükle
+                    # QR kod yoksa oluştur
                     qr = qrcode.QRCode(version=1, box_size=10, border=4)
                     qr.add_data(qr_id)
                     qr.make(fit=True)
@@ -1376,10 +1496,19 @@ def download_all_qr():
                     
                     img_data = img_buffer.getvalue()
                     
-                    # B2'ye yükle
-                    upload_result = b2_service.upload_file(file_path, img_data, 'image/png')
-                    if upload_result['success']:
-                        logging.info(f"QR code uploaded to B2: {file_path}")
+                    if USE_B2_STORAGE and get_b2_service:
+                        # PRODUCTION: B2'ye yükle (KALICI)
+                        b2_service = get_b2_service()
+                        upload_result = b2_service.upload_file(file_path, img_data, 'image/png')
+                        if upload_result['success']:
+                            logging.info(f"QR code uploaded to B2: {file_path}")
+                    else:
+                        # LOCAL: Static klasörüne kaydet (GEÇİCİ)
+                        qr_dir = os.path.join('static', 'qrcodes')
+                        os.makedirs(qr_dir, exist_ok=True)
+                        local_path = os.path.join(qr_dir, f'{qr_id}.png')
+                        with open(local_path, 'wb') as f:
+                            f.write(img_data)
                     
                     # ZIP'e ekle
                     zipf.writestr(f'{part_code}_{qr_id}.png', img_data)
@@ -2135,12 +2264,14 @@ def health_check():
         db_status = "✅ OK"
         
         # B2 bağlantı kontrolü
-        try:
-            from b2_storage import get_b2_service
-            b2_service = get_b2_service()
-            b2_status = "✅ OK"
-        except Exception:
-            b2_status = "⚠️ ERROR"
+        if USE_B2_STORAGE and get_b2_service:
+            try:
+                b2_service = get_b2_service()
+                b2_status = "✅ OK (PRODUCTION)"
+            except Exception:
+                b2_status = "⚠️ ERROR (PRODUCTION)"
+        else:
+            b2_status = "🏠 LOCAL MODE (B2 Disabled)"
         
         return jsonify({
             'status': 'healthy',

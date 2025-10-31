@@ -918,7 +918,7 @@ def upload_parts():
     conn = get_db()
     cursor = conn.cursor()
     placeholder = get_db_placeholder()
-    cursor.execute(f'SELECT COUNT(*) as count FROM count_sessions WHERE is_active = {placeholder}', (True,))
+    cursor.execute(f'SELECT COUNT(*) as count FROM count_sessions WHERE status = {placeholder}', ('active',))
     active_session = cursor.fetchone()
     close_db(conn)
     

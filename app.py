@@ -2450,36 +2450,83 @@ def migrate_update_admin_password():
         from werkzeug.security import generate_password_hash
         
         if USE_POSTGRESQL:
-            # PostgreSQL - SQLAlchemy
-            admin_user = User.query.filter_by(username='admin').first()
-            if admin_user:
-                # Update password hash
-                admin_user.password_hash = generate_password_hash("@R9t$L7e!xP2w")
-                db.session.commit()
-                return {
-                    'success': True, 
-                    'message': 'PostgreSQL admin password updated to Werkzeug hash',
-                    'username': 'admin',
-                    'note': 'Password: @R9t$L7e!xP2w'
-                }
-            else:
-                # Create new admin user
-                admin_password = generate_password_hash("@R9t$L7e!xP2w")
-                admin = User(
-                    username='admin',
-                    full_name='Administrator',
-                    password_hash=admin_password,
-                    role='admin',
-                    is_active_user=True
-                )
-                db.session.add(admin)
-                db.session.commit()
-                return {
-                    'success': True, 
-                    'message': 'PostgreSQL admin user created with Werkzeug hash',
-                    'username': 'admin',
-                    'note': 'Password: @R9t$L7e!xP2w'
-                }
+            # First, create missing columns if they don't exist
+            try:
+                with db.engine.connect() as conn:
+                    # Add missing columns to envanter_users table
+                    missing_columns = [
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS real_name VARCHAR(255);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email VARCHAR(255);", 
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS job_title VARCHAR(120);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS title VARCHAR(120);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS work_position VARCHAR(120);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS user_group VARCHAR(120);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS user_role VARCHAR(120);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS signature_path VARCHAR(500);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS profile_image_path VARCHAR(500);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS is_active_user BOOLEAN DEFAULT TRUE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS can_mark_used BOOLEAN DEFAULT FALSE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_enabled BOOLEAN DEFAULT FALSE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_code VARCHAR(10);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_expires TIMESTAMP;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_attempts INTEGER DEFAULT 0;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS email_2fa_locked_until TIMESTAMP;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS tc_number VARCHAR(20);",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS last_password_change TIMESTAMP;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT FALSE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS force_tutorial BOOLEAN DEFAULT TRUE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS first_login_completed BOOLEAN DEFAULT FALSE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS terms_accepted BOOLEAN DEFAULT FALSE;",
+                        "ALTER TABLE envanter_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+                    ]
+                    
+                    for sql in missing_columns:
+                        try:
+                            conn.execute(db.text(sql))
+                            conn.commit()
+                        except Exception as col_error:
+                            # Column might already exist, continue
+                            pass
+                            
+                print("✅ PostgreSQL schema updated")
+            except Exception as schema_error:
+                return {'success': False, 'error': f'Schema update failed: {str(schema_error)}'}
+            
+            # Now try to work with admin user
+            try:
+                admin_user = User.query.filter_by(username='admin').first()
+                if admin_user:
+                    # Update password hash
+                    admin_user.password_hash = generate_password_hash("@R9t$L7e!xP2w")
+                    db.session.commit()
+                    return {
+                        'success': True, 
+                        'message': 'PostgreSQL admin password updated to Werkzeug hash',
+                        'username': 'admin',
+                        'note': 'Password: @R9t$L7e!xP2w'
+                    }
+                else:
+                    # Create new admin user
+                    admin_password = generate_password_hash("@R9t$L7e!xP2w")
+                    admin = User(
+                        username='admin',
+                        full_name='Administrator',
+                        password_hash=admin_password,
+                        role='admin',
+                        is_active_user=True
+                    )
+                    db.session.add(admin)
+                    db.session.commit()
+                    return {
+                        'success': True, 
+                        'message': 'PostgreSQL admin user created with Werkzeug hash',
+                        'username': 'admin',
+                        'note': 'Password: @R9t$L7e!xP2w'
+                    }
+            except Exception as user_error:
+                return {'success': False, 'error': f'User operation failed: {str(user_error)}'}
+                
         else:
             # SQLite - Raw SQL
             conn = get_db()

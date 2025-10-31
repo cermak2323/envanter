@@ -972,6 +972,9 @@
             todayScans: 0,
             totalDuration: 0
         };
+        // debug / debounce for QR decoding
+        let lastDecoded = null;
+        let lastDecodedAt = 0; // epoch ms
 
         // Sayfa yüklendiğinde
         document.addEventListener('DOMContentLoaded', function() {
@@ -1378,15 +1381,36 @@
                 console.log('Preferred deviceId for start:', preferredDeviceId);
 
                 const successCallback = (decodedText, decodedResult) => {
-                    console.log('QR decoded:', decodedText, decodedResult);
-                    addScanMessage({ success: true, message: `Okunan QR: ${decodedText}` });
-                    // Emit to server
-                    try { socket.emit('scan_qr', { qr_id: decodedText }); } catch (e) { console.warn('socket emit failed', e); }
+                    try {
+                        const now = Date.now();
+                        // debounce: ignore the same code within 2 seconds
+                        if (decodedText === lastDecoded && (now - lastDecodedAt) < 2000) {
+                            console.log('Duplicate QR ignored:', decodedText);
+                            return;
+                        }
+                        lastDecoded = decodedText;
+                        lastDecodedAt = now;
+
+                        console.log('QR decoded:', decodedText, decodedResult);
+                        addScanMessage({ success: true, message: `Okunan QR: ${decodedText}` });
+                        // Emit to server
+                        try { socket.emit('scan_qr', { qr_id: decodedText }); } catch (e) { console.warn('socket emit failed', e); }
+                    } catch (e) {
+                        console.error('Error in successCallback:', e);
+                    }
                 };
 
                 const errorCallback = (errorMessage) => {
-                    // Can display or ignore
-                    // console.warn('QR error:', errorMessage);
+                    // Show occasional decoding errors to help debugging
+                    if (errorMessage) {
+                        console.warn('QR decode error:', errorMessage);
+                        // Don't spam the UI for every decode attempt; only show warnings occasionally
+                        const now = Date.now();
+                        if ((now - (window.__lastQrErrorShown || 0)) > 3000) {
+                            window.__lastQrErrorShown = now;
+                            addScanMessage({ success: false, message: `QR hata: ${errorMessage}` });
+                        }
+                    }
                 };
 
                 if (preferredDeviceId) {

@@ -1948,10 +1948,12 @@
                 
                 // QR taraması başarılı gibi işle
                 if (socket && socket.connected) {
-                    console.log('📡 Socket.IO üzerinden QR gönderiliyor');
-                    socket.emit('scan_qr', { qr_code: qrValue }, (response) => {
-                        console.log('✅ Server yanıt verdi:', response);
-                        if (response && response.success) {
+                    console.log('📡 Socket.IO üzerinden QR gönderiliyor:', { qr_code: qrValue });
+                    
+                    // scan_result event'ini dinle
+                    const handleResponse = (data) => {
+                        console.log('✅ Server yanıt verdi:', data);
+                        if (data && data.success) {
                             addScanMessage({ 
                                 success: true, 
                                 message: '✅ QR başarıyla tarandı: ' + qrValue
@@ -1959,12 +1961,18 @@
                         } else {
                             addScanMessage({ 
                                 success: false, 
-                                message: '❌ QR işlenemedi: ' + (response ? response.error : 'Bilinmeyen hata')
+                                message: '❌ QR işlenemedi: ' + (data && data.message ? data.message : 'Bilinmeyen hata')
                             });
                         }
-                    });
+                        // Bir kez dinlettikten sonra kaldır
+                        socket.off('scan_result', handleResponse);
+                    };
+                    
+                    socket.on('scan_result', handleResponse);
+                    socket.emit('scan_qr', { qr_code: qrValue });
                 } else {
-                    console.error('❌ Socket.IO bağlı değil');
+                    console.error('❌ Socket.IO bağlı değil:', socket ? 'Socket tanımlandı ama bağlı değil' : 'Socket tanımlanmadı');
+                    console.error('   Socket obje:', socket);
                     addScanMessage({ 
                         success: false, 
                         message: '❌ Sunucuya bağlanılamadı'

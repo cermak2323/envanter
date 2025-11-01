@@ -1282,8 +1282,12 @@
 
         async function startCamera() {
             if (html5QrCode) {
+                console.log('⚠️  Camera already running');
                 return;
             }
+            
+            window.__cameraStartTime = Date.now();
+            console.log('🎥 Starting camera...');
 
             if (!availableCameras || availableCameras.length === 0) {
                 await getCameras();
@@ -1385,46 +1389,75 @@
                         const now = Date.now();
                         // debounce: ignore the same code within 2 seconds
                         if (decodedText === lastDecoded && (now - lastDecodedAt) < 2000) {
-                            console.log('Duplicate QR ignored:', decodedText);
+                            console.log('🚫 Duplicate QR ignored:', decodedText);
                             return;
                         }
                         lastDecoded = decodedText;
                         lastDecodedAt = now;
 
-                        console.log('QR decoded:', decodedText, decodedResult);
-                        addScanMessage({ success: true, message: `Okunan QR: ${decodedText}` });
+                        console.log('✅ QR DECODED:', decodedText);
+                        console.log('📊 Full result:', decodedResult);
+                        addScanMessage({ success: true, message: `✅ Okunan QR: ${decodedText}` });
+                        
                         // Emit to server
-                        try { socket.emit('scan_qr', { qr_id: decodedText }); } catch (e) { console.warn('socket emit failed', e); }
+                        if (socket && socket.connected) {
+                            console.log('📤 Emitting scan_qr to server...');
+                            socket.emit('scan_qr', { qr_id: decodedText });
+                            console.log('📤 scan_qr emitted successfully');
+                        } else {
+                            console.error('❌ Socket not connected! socket:', socket, 'connected:', socket?.connected);
+                            addScanMessage({ success: false, message: '❌ Server bağlantısı yok!' });
+                        }
                     } catch (e) {
-                        console.error('Error in successCallback:', e);
+                        console.error('❌ Error in successCallback:', e);
+                        addScanMessage({ success: false, message: `❌ Hata: ${e.message}` });
                     }
                 };
 
                 const errorCallback = (errorMessage) => {
-                    // Show occasional decoding errors to help debugging
+                    // Log all errors to console for debugging
                     if (errorMessage) {
-                        console.warn('QR decode error:', errorMessage);
-                        // Don't spam the UI for every decode attempt; only show warnings occasionally
-                        const now = Date.now();
-                        if ((now - (window.__lastQrErrorShown || 0)) > 3000) {
-                            window.__lastQrErrorShown = now;
-                            addScanMessage({ success: false, message: `QR hata: ${errorMessage}` });
+                        // Filter out common non-critical errors
+                        const isCommonError = errorMessage.includes('NotFoundException') || 
+                                            errorMessage.includes('QR code not found') ||
+                                            errorMessage.includes('No MultiFormat') ||
+                                            errorMessage.includes('could not find');
+                        
+                        // Log aggressively during first 30 seconds, then less often
+                        const timeSinceStart = Date.now() - (window.__cameraStartTime || 0);
+                        const shouldLog = timeSinceStart < 30000 || (Date.now() - (window.__lastQrErrorLogged || 0)) > 10000;
+                        
+                        if (!isCommonError && shouldLog) {
+                            console.warn('⚠️  QR Decode Warning:', errorMessage.substring(0, 100));
+                            window.__lastQrErrorLogged = Date.now();
                         }
                     }
                 };
 
                 if (preferredDeviceId) {
+                    console.log('Starting html5QrCode with deviceId:', preferredDeviceId);
                     await html5QrCode.start(
                         preferredDeviceId,
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        { 
+                            fps: 30,  // Increased from 10 for better detection
+                            qrbox: { width: 300, height: 300 },  // Increased box size
+                            disableFlip: false,
+                            aspectRatio: 1.0
+                        },
                         successCallback,
                         errorCallback
                     );
                 } else {
                     // try facingMode if deviceId unavailable
+                    console.log('Starting html5QrCode with facingMode: environment');
                     await html5QrCode.start(
                         { facingMode: { exact: 'environment' } },
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        { 
+                            fps: 30,  // Increased from 10
+                            qrbox: { width: 300, height: 300 },  // Increased box size
+                            disableFlip: false,
+                            aspectRatio: 1.0
+                        },
                         successCallback,
                         errorCallback
                     );

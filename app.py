@@ -1789,24 +1789,41 @@ def download_all_qr():
     return send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name='qr_codes.zip')
 
 def start_count_internal():
+    # GÜVENLIK: Sadece admin sayım başlatabilir
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Giriş yapmanız gereklidir'}), 401
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Kullanıcının admin olup olmadığını kontrol et
+    cursor.execute("SELECT role FROM users WHERE id = %s", (user_id,))
+    user_result = cursor.fetchone()
+    
+    if not user_result or user_result[0] != 'admin':
+        close_db(conn)
+        security_logger.warning(f'USER {user_id} tried to start count session without admin privileges')
+        return jsonify({'error': 'Sadece admin kullanıcı sayım başlatabilir'}), 403
+    
     if 'file' not in request.files:
+        close_db(conn)
         return jsonify({'error': 'Dosya bulunamadı'}), 400
     
     file = request.files['file']
     if file.filename == '':
+        close_db(conn)
         return jsonify({'error': 'Dosya seçilmedi'}), 400
     
     try:
         df = pd.read_excel(file)
 
-
         required_columns = ['part_code', 'quantity']
         if not all(col in df.columns for col in required_columns):
+            close_db(conn)
             return jsonify({'error': 'Excel dosyası "part_code" ve "quantity" sütunlarını içermelidir'}), 400
 
-        conn = get_db()
-        cursor = conn.cursor()
-
+        # Aktif sayım kontrolü
         cursor.execute("SELECT COUNT(*) as count FROM count_sessions WHERE status = 'active'")
         active_session = cursor.fetchone()
         if active_session[0] > 0:
@@ -1814,7 +1831,9 @@ def start_count_internal():
             return jsonify({'error': 'Aktif bir sayım oturumu var. Önce mevcut sayımı bitirin.'}), 400
 
         session_id = uuid.uuid4().hex
-        cursor.execute('INSERT INTO count_sessions (session_id, status) VALUES (%s, %s)', (session_id, 'active'))
+        # Admin'i created_by olarak kaydet
+        cursor.execute('INSERT INTO count_sessions (session_id, status, created_by) VALUES (%s, %s, %s)', 
+                     (session_id, 'active', user_id))
 
         for _, row in df.iterrows():
             part_code = str(row['part_code'])
@@ -1886,7 +1905,6 @@ def verify_count_password():
     active_session_id = session_result[0]
     
     # GÜVENLIK: Bu kullanıcı başka aktif sayımda mı zaten katılı?
-    # (Aynı session_id'de katılmış ise zaten sayımda, başka session'da ise blok et)
     cursor.execute('''
         SELECT session_id FROM scanned_qr 
         WHERE scanned_by = %s AND session_id != %s

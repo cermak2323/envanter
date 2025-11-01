@@ -1235,7 +1235,7 @@ def mark_qr_used():
             return jsonify({'error': 'QR kod zaten kullanılmış'}), 400
             
         # QR kodu kullanıldı olarak işaretle
-        cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = CURRENT_TIMESTAMP WHERE qr_id = %s', (qr_id,))
+        cursor.execute('UPDATE qr_codes SET is_used = true, used_at = CURRENT_TIMESTAMP WHERE qr_id = %s', (qr_id,))
         conn.commit()
         close_db(conn)
         
@@ -1409,7 +1409,7 @@ def download_single_qr(qr_id):
         close_db(conn)
         return jsonify({'error': 'QR kod bulunamadı'}), 404
     
-    cursor.execute('UPDATE qr_codes SET is_downloaded = 1, downloaded_at = %s WHERE qr_id = %s',
+    cursor.execute('UPDATE qr_codes SET is_downloaded = true, downloaded_at = %s WHERE qr_id = %s',
                  (datetime.now(), qr_id))
     conn.commit()
     close_db(conn)
@@ -2043,7 +2043,7 @@ def handle_scan(data):
     
     try:
         # QR kodu kullanıldı olarak işaretle - gerçek QR ID kullan
-        cursor.execute('UPDATE qr_codes SET is_used = 1, used_at = %s WHERE qr_id = %s',
+        cursor.execute('UPDATE qr_codes SET is_used = true, used_at = %s WHERE qr_id = %s',
                      (datetime.now(), actual_qr_id))
         
         # Sayım kaydı ekle - gerçek QR ID kullan

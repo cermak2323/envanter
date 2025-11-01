@@ -463,24 +463,29 @@
         }
 
         .btn-finish {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 50%, #e74c3c 100%);
             color: white;
             border: none;
-            padding: 1rem 2rem;
-            border-radius: 16px;
+            padding: 0;
             font-weight: 700;
-            font-size: 1.1rem;
-            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
+            font-size: 32px;
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-flex;
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
-            position: relative;
+            gap: 0;
+            z-index: 99;
             overflow: hidden;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            min-height: 60px;
+            cursor: pointer;
         }
 
         .btn-finish:before {
@@ -499,18 +504,20 @@
         }
 
         .btn-finish:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 12px 35px rgba(231, 76, 60, 0.4);
+            transform: translateY(-8px) scale(1.1);
+            box-shadow: 0 12px 35px rgba(231, 76, 60, 0.5);
             color: white;
         }
 
         .btn-finish:active {
-            transform: translateY(-2px) scale(1.01);
+            transform: translateY(-4px) scale(1.05);
             box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3);
         }
 
         .btn-finish i {
-            font-size: 1.3rem;
+            font-size: 32px;
+            position: relative;
+            z-index: 1;
         }
 
         /* Responsive Design */
@@ -539,21 +546,34 @@
             }
 
             .scanner-controls {
-                flex-direction: column;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+                flex-wrap: wrap;
             }
 
             .btn-scanner {
                 min-width: auto;
+                padding: 0.6rem 0.75rem;
+                font-size: 0.85rem;
             }
 
             .progress-stats {
                 justify-content: center;
+            }
+            
+            /* Mobil debug panel */
+            #debugPanel {
+                max-height: 150px !important;
+                font-size: 11px !important;
+                padding: 10px !important;
             }
         }
 
         @media (max-width: 480px) {
             body {
                 padding: 0.5rem;
+                padding-bottom: 100px;
             }
 
             .app-container {
@@ -563,6 +583,7 @@
             .app-header {
                 padding: 1rem;
                 border-radius: 15px;
+                margin-bottom: 0.5rem;
             }
 
             .header-title {
@@ -571,7 +592,53 @@
 
             .btn-header {
                 padding: 0.5rem 0.75rem;
-                font-size: 0.875rem;
+                font-size: 0.75rem;
+            }
+            
+            .scanner-controls {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.4rem;
+            }
+
+            .btn-scanner {
+                min-width: auto;
+                padding: 0.5rem 0.5rem;
+                font-size: 0.75rem;
+                border-radius: 8px;
+            }
+            
+            .btn-scanner i {
+                font-size: 0.9rem;
+            }
+            
+            #reader {
+                min-height: 200px;
+                max-height: 250px;
+                border-radius: 10px;
+            }
+            
+            .btn-finish {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                width: 56px;
+                height: 56px;
+                border-radius: 50%;
+                font-size: 20px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 100;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                min-width: auto;
+            }
+            
+            #debugPanel {
+                max-height: 120px !important;
+                font-size: 10px !important;
+                padding: 8px !important;
+                margin-top: 8px !important;
             }
         }
 
@@ -756,6 +823,10 @@
                     <i class="bi bi-person-circle"></i>
                     <span id="userName">-</span>
                 </span>
+                <button class="btn-header" onclick="toggleDebugPanel()" title="Mobil Debug Paneli" style="background: rgba(108, 117, 125, 0.2);">
+                    <i class="bi bi-terminal"></i>
+                    <span style="display: none;">Debug</span>
+                </button>
                 <button class="btn-header" onclick="goToMain()">
                     <i class="bi bi-house"></i>
                     Ana Sayfa
@@ -811,10 +882,6 @@
                     <button class="btn-scanner btn-info" onclick="testQRScan()">
                         <i class="bi bi-bug"></i>
                         Test QR
-                    </button>
-                    <button class="btn-scanner btn-primary" onclick="toggleDebugPanel()" style="background: #6c757d;">
-                        <i class="bi bi-terminal"></i>
-                        Debug Aç
                     </button>
                 </div>
                 
@@ -932,18 +999,10 @@
 
     <!-- Finish Section - Alt Kısım (Sadece admin için) -->
     {% if session['role'] == 'admin' %}
-    <div class="finish-section-bottom">
-        <div class="container-fluid">
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <button class="btn-finish w-100" onclick="finishCount()">
-                        <i class="bi bi-stop-circle"></i>
-                        Sayımı Bitir ve Rapor Al
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Floating Finish Button (Mobil Uyumlu) -->
+    <button class="btn-finish" onclick="finishCount()" title="Sayımı Bitir">
+        <i class="bi bi-stop-circle"></i>
+    </button>
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

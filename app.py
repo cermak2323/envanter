@@ -430,6 +430,10 @@ def generate_strong_password():
     random.shuffle(password)
     return ''.join(password)
 
+def generate_count_password():
+    """Sayım için parola oluştur (6 haneli sadece sayı) - Basit ve hızlı giriş için"""
+    return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
 # Admin sayım şifresi
 ADMIN_COUNT_PASSWORD = "@R9t$L7e!xP2w"
 print(f"DEBUG: ADMIN_COUNT_PASSWORD = '{ADMIN_COUNT_PASSWORD}'")  # DEBUG
@@ -1824,8 +1828,8 @@ def start_count_internal():
                          (session_id, part_code, part_name, quantity))
 
         # Güçlü parola oluştur ve kaydet
-        count_password = generate_strong_password()
-        print(f"DEBUG: Oluşturulan şifre: {count_password}")  # Debug
+        count_password = generate_count_password()  # 6 haneli sayı
+        print(f"DEBUG: Oluşturulan sayım şifresi: {count_password}")  # Debug
         cursor.execute('INSERT INTO count_passwords (session_id, password, created_by) VALUES (%s, %s, %s)',
                      (session_id, count_password, session['user_id']))
 

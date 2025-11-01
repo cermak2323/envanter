@@ -1865,8 +1865,14 @@ def verify_count_password():
     conn = get_db()
     cursor = conn.cursor()
     
+    # Şu anda login'li kullanıcı bilgisini al
+    user_id = session.get('user_id')
+    if not user_id:
+        close_db(conn)
+        return jsonify({'error': 'Lütfen önce giriş yapın'}), 401
+    
     # Aktif sayım oturumunu bul
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute("SELECT session_id FROM count_sessions WHERE status = 'active' LIMIT 1")
     session_result = cursor.fetchone()
     
     if not session_result:
@@ -1874,6 +1880,18 @@ def verify_count_password():
         return jsonify({'error': 'Aktif sayım oturumu bulunamadı'}), 404
     
     session_id = session_result[0]
+    
+    # GÜVENLIK: Bu kullanıcı şu anda başka bir sayım oturumunda mı?
+    cursor.execute('''
+        SELECT COUNT(*) FROM scanned_qr 
+        WHERE scanned_by = %s AND session_id != %s 
+        LIMIT 1
+    ''', (user_id, session_id))
+    
+    if cursor.fetchone()[0] > 0:
+        close_db(conn)
+        security_logger.warning(f'USER {user_id} tried to join multiple count sessions')
+        return jsonify({'error': 'Siz zaten başka bir sayımda katılısınız. Önce o sayımı bitirin.'}), 403
     
     # Parolayı kontrol et
     cursor.execute('SELECT password FROM count_passwords WHERE session_id = %s', (session_id,))
@@ -1894,11 +1912,26 @@ def verify_count_password():
 @app.route('/get_count_status')
 @login_required
 def get_count_status():
-    # Geçici basit response - sayım sistemi şimdilik kapalı
-    return jsonify({
-        'active': False,
-        'active_session': None
-    })
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Aktif sayım oturumunu bul
+    cursor.execute("SELECT session_id, created_at FROM count_sessions WHERE status = 'active' LIMIT 1")
+    session_result = cursor.fetchone()
+    close_db(conn)
+    
+    if session_result:
+        return jsonify({
+            'active': True,
+            'session_id': session_result[0],
+            'created_at': session_result[1].isoformat() if session_result[1] else None
+        })
+    else:
+        return jsonify({
+            'active': False,
+            'session_id': None,
+            'created_at': None
+        })
 
 @app.route('/get_session_stats')
 @login_required
@@ -1981,102 +2014,73 @@ def get_recent_activities():
 
 @socketio.on('scan_qr')
 def handle_scan(data):
-    print(f"DEBUG: handle_scan çağrıldı, data: {data}")  # DEBUG
-    print(f"DEBUG: session keys: {list(session.keys())}")  # DEBUG
-    print(f"DEBUG: count_access: {session.get('count_access')}")  # DEBUG
+    # PERFORMANCE: Minimal debugging, optimize for speed
     
-    # Sayım erişim kontrolü - önce aktif sayım olup olmadığını kontrol et
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Aktif sayım oturumu kontrolü
-    cursor.execute("SELECT session_id FROM count_sessions WHERE status = 'active' LIMIT 1")
-    session_result = cursor.fetchone()
-    
-    if not session_result:
-        emit('scan_result', {'success': False, 'message': 'Aktif sayım oturumu bulunamadı'})
-        close_db(conn)
-        print("DEBUG: Aktif sayım oturumu bulunamadı")
-        return
-    
-    session_id = session_result[0]
-    print(f"DEBUG: Aktif session_id: {session_id}")
-    
-    # Sayım erişim kontrolü - sadece aktif sayım varsa kontrol et
+    # Sayım erişim kontrolü - şifre kontrol et
     if not session.get('count_access'):
         emit('scan_result', {'success': False, 'message': 'Sayım erişimi için şifre gerekli'})
-        close_db(conn)
-        print("DEBUG: count_access yok")
         return
     
-    # qr_code veya qr_id parametrelerini kabul et (manuel giriş için qr_code, tarama için qr_id)
+    # qr_code veya qr_id parametrelerini kabul et
     qr_id = data.get('qr_id') or data.get('qr_code')
     if not qr_id:
         emit('scan_result', {'success': False, 'message': 'QR kod verisi eksik'})
-        close_db(conn)
-        print("DEBUG: QR kod verisi eksik")
         return
     
-    print(f"DEBUG: QR kod okutuldu: {qr_id}")
-    
-    # QR kod kontrolü - hem tam QR ID hem de part code ile ara
-    cursor.execute('SELECT qr_id, part_code, part_name, is_used FROM qr_codes WHERE qr_id = %s OR part_code = %s', (qr_id, qr_id))
-    qr_result = cursor.fetchone()
-    
-    if not qr_result:
-        emit('scan_result', {'success': False, 'message': f'QR kod bulunamadı: {qr_id}'})
-        close_db(conn)
-        print(f"DEBUG: QR kod bulunamadı: {qr_id}")
-        return
-    
-    if qr_result[3] == 1:
-        emit('scan_result', {'success': False, 'message': 'Bu QR kod daha önce kullanıldı'})
-        close_db(conn)
-        print(f"DEBUG: QR kod zaten kullanılmış: {qr_id}")
-        return
-    
-    # Bulunan QR kodun gerçek bilgilerini al
-    actual_qr_id = qr_result[0]  # Gerçek QR ID
-    part_code = qr_result[1]
-    part_name = qr_result[2]
-    
-    print(f"DEBUG: Bulunan QR - ID: {actual_qr_id}, Part: {part_code}, Name: {part_name}")
+    conn = get_db()
+    cursor = conn.cursor()
     
     try:
-        # QR kodu kullanıldı olarak işaretle - gerçek QR ID kullan
+        # PERFORMANCE: Get active session + QR data in single optimized query
+        cursor.execute('''
+            SELECT s.session_id, q.qr_id, q.part_code, q.part_name, q.is_used, u.full_name
+            FROM count_sessions s, qr_codes q, users u
+            WHERE s.status = 'active'
+            AND (q.qr_id = %s OR q.part_code = %s)
+            AND u.id = %s
+            LIMIT 1
+        ''', (qr_id, qr_id, session.get('user_id')))
+        
+        result = cursor.fetchone()
+        
+        if not result:
+            emit('scan_result', {'success': False, 'message': f'QR kod bulunamadı veya aktif sayım yok'})
+            close_db(conn)
+            return
+        
+        session_id, actual_qr_id, part_code, part_name, is_used, user_name = result
+        
+        # Already used check
+        if is_used:
+            emit('scan_result', {'success': False, 'message': f'Bu QR kod daha önce kullanıldı: {part_name}'})
+            close_db(conn)
+            return
+        
+        # PERFORMANCE: Combined update + insert in transaction
         cursor.execute('UPDATE qr_codes SET is_used = true, used_at = %s WHERE qr_id = %s',
                      (datetime.now(), actual_qr_id))
         
-        # Sayım kaydı ekle - gerçek QR ID kullan
         cursor.execute('INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by) VALUES (%s, %s, %s, %s)',
                      (session_id, actual_qr_id, part_code, session.get('user_id')))
         
         conn.commit()
-        print(f"DEBUG: QR kod başarıyla işlendi: {qr_id}")
-        
-        # Kullanıcı bilgisini al
-        cursor.execute('SELECT full_name FROM users WHERE id = %s', (session.get('user_id'),))
-        user_result = cursor.fetchone()
-        user_name = user_result[0] if user_result else 'Bilinmeyen Kullanıcı'
-        
         close_db(conn)
         
+        # Send result to client
         emit('scan_result', {
             'success': True,
-            'message': f'{part_name} ({part_code}) sayıldı',
+            'message': f'{part_name} ({part_code}) sayıldı ✅',
             'qr_code': actual_qr_id,
             'part_code': part_code,
             'part_name': part_name,
             'scanned_by': user_name,
-            'scanned_at': datetime.now().strftime('%H:%M')
+            'scanned_at': datetime.now().strftime('%H:%M:%S'),
+            'qr_id': actual_qr_id
         })
-        
-        print(f"DEBUG: scan_result emit edildi: success=True")
         
     except Exception as e:
         conn.rollback()
         close_db(conn)
-        print(f"DEBUG: Veritabanı hatası: {e}")
         emit('scan_result', {'success': False, 'message': f'Veritabanı hatası: {str(e)}'})
         return
 

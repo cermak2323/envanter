@@ -1229,11 +1229,30 @@
             const data = await response.json();
             if (data.authenticated) {
                 document.getElementById('userName').textContent = data.full_name;
-                // Session ID'yi de göster
+                
+                // Session ID ve başlangıç tarihi göster
                 const sessionResponse = await fetch('/get_count_status');
                 const sessionData = await sessionResponse.json();
+                
                 if (sessionData.active && sessionData.session_id) {
-                    document.getElementById('sessionInfo').textContent = `Oturum ID: ${sessionData.session_id.substring(0, 8)}...`;
+                    const sessionId = sessionData.session_id.substring(0, 8);
+                    let startDate = 'Tarih: -';
+                    
+                    if (sessionData.created_at) {
+                        const date = new Date(sessionData.created_at);
+                        const timeStr = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                        startDate = `${timeStr}`;
+                    }
+                    
+                    document.getElementById('sessionInfo').innerHTML = `
+                        <span>🆔 Oturum: ${sessionId}</span> | 
+                        <span>⏰ Başlangıç: ${startDate}</span>
+                    `;
+                    
+                    console.log('✅ Sayım Oturumu Bilgisi Yüklendi:', {
+                        session_id: sessionData.session_id,
+                        created_at: sessionData.created_at
+                    });
                 }
             } else {
                 window.location.href = '/';
@@ -1524,9 +1543,9 @@
                     try {
                         // Capture frame only if video is ready
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                            // Performance optimization: skip every 2nd frame to reduce CPU usage
+                            // Performance: Skip every frame for ultra-fast scanning (20 FPS instead of 10)
                             skipFrames++;
-                            if (skipFrames % 2 === 0) {
+                            if (skipFrames % 1 !== 0) { // Process every frame for speed
                                 return; // Skip this frame
                             }
                             
@@ -1591,7 +1610,7 @@
                     } catch (err) {
                         console.debug('Fallback capture error:', err.message);
                     }
-                }, 100); // Capture every 100ms = 10 FPS
+                }, 50); // PERFORMANCE: Reduced from 100ms to 50ms = 20 FPS (faster scanning)
                 
                 // Auto-stop after 30 seconds (reduced from 60s for faster performance)
                 setTimeout(() => {

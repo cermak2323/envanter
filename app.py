@@ -1883,22 +1883,24 @@ def verify_count_password():
         close_db(conn)
         return jsonify({'error': 'Aktif sayım oturumu bulunamadı'}), 404
     
-    session_id = session_result[0]
+    active_session_id = session_result[0]
     
-    # GÜVENLIK: Bu kullanıcı şu anda başka bir sayım oturumunda mı?
+    # GÜVENLIK: Bu kullanıcı başka aktif sayımda mı zaten katılı?
+    # (Aynı session_id'de katılmış ise zaten sayımda, başka session'da ise blok et)
     cursor.execute('''
-        SELECT COUNT(*) FROM scanned_qr 
-        WHERE scanned_by = %s AND session_id != %s 
+        SELECT session_id FROM scanned_qr 
+        WHERE scanned_by = %s AND session_id != %s
         LIMIT 1
-    ''', (user_id, session_id))
+    ''', (user_id, active_session_id))
     
-    if cursor.fetchone()[0] > 0:
+    other_session = cursor.fetchone()
+    if other_session:
         close_db(conn)
-        security_logger.warning(f'USER {user_id} tried to join multiple count sessions')
+        security_logger.warning(f'USER {user_id} tried to join multiple count sessions - Already in session {other_session[0]}, trying {active_session_id}')
         return jsonify({'error': 'Siz zaten başka bir sayımda katılısınız. Önce o sayımı bitirin.'}), 403
     
     # Parolayı kontrol et
-    cursor.execute('SELECT password FROM count_passwords WHERE session_id = %s', (session_id,))
+    cursor.execute('SELECT password FROM count_passwords WHERE session_id = %s', (active_session_id,))
     password_result = cursor.fetchone()
     
     close_db(conn)
@@ -1908,9 +1910,10 @@ def verify_count_password():
     
     if password_result[0] == password:
         session['count_access'] = True
-        session['current_session'] = session_id
+        session['current_session'] = active_session_id
         return jsonify({'success': True, 'message': 'Parola doğru, sayım ekranına yönlendiriliyorsunuz'})
     else:
+        security_logger.warning(f'USER {user_id} failed password attempt for session {active_session_id}')
         return jsonify({'error': 'Yanlış parola'}), 401
 
 @app.route('/get_count_status')
@@ -2098,19 +2101,24 @@ def finish_count():
     cursor = conn.cursor()
     
     # Aktif sayım oturumunu kontrol et
-    cursor.execute("SELECT session_id, status FROM count_sessions WHERE status = \'active\' LIMIT 1")
+    cursor.execute("SELECT session_id, status, created_by FROM count_sessions WHERE status = 'active' LIMIT 1")
     session_result = cursor.fetchone()
     
     if not session_result:
         close_db(conn)
         return jsonify({'error': 'Aktif sayım oturumu bulunamadı'}), 400
     
-    session_id = session_result[0]
+    session_id, status, created_by = session_result
+    
+    # GÜVENLIK: Sadece sayımı başlatan kişi bitirebilir
+    current_user_id = session.get('user_id')
+    if created_by != current_user_id:
+        close_db(conn)
+        security_logger.warning(f'USER {current_user_id} tried to finish count session {session_id} started by USER {created_by}')
+        return jsonify({'error': 'Sadece sayımı başlatan kişi bittirebilir'}), 403
     
     # Çift işlem kontrolü - eğer bu oturum zaten tamamlandıysa
-    cursor.execute('SELECT status FROM count_sessions WHERE session_id = %s', (session_id,))
-    current_status = cursor.fetchone()
-    if current_status and current_status[0] != 'active':
+    if status != 'active':
         close_db(conn)
         return jsonify({'error': 'Bu sayım oturumu zaten tamamlanmış'}), 400
     

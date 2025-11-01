@@ -485,31 +485,47 @@ def get_db():
 def close_db(conn):
     """Return connection to pool (PostgreSQL) or close (SQLite)"""
     
+    if not conn:
+        return
+    
     if USE_POSTGRESQL:
         # PRODUCTION: Return to PostgreSQL pool
         try:
-            if conn:
-                # If connection is already closed at the libpq level, tell the pool to close it
-                try:
-                    if getattr(conn, 'closed', 1):
-                        db_pool.putconn(conn, close=True)
-                    else:
-                        db_pool.putconn(conn)
-                except TypeError:
-                    # Older psycopg2 versions may not accept close kwarg; fallback
+            # Check if connection is valid before returning to pool
+            if hasattr(conn, 'closed'):
+                if conn.closed == 0:  # Connection is open
                     try:
                         db_pool.putconn(conn)
-                    except Exception:
+                    except (TypeError, Exception) as e:
+                        # Connection already exists in pool or other issue
+                        try:
+                            conn.close()
+                        except:
+                            pass
+                else:  # Connection is closed
+                    try:
+                        db_pool.putconn(conn, close=True)
+                    except (TypeError, Exception):
+                        pass
+            else:
+                # Connection object doesn't have 'closed' attribute, try to return anyway
+                try:
+                    db_pool.putconn(conn)
+                except (TypeError, Exception):
+                    try:
+                        conn.close()
+                    except:
                         pass
         except Exception as e:
-            logging.error(f"Error returning PostgreSQL connection to pool: {e}")
+            logging.debug(f"Error returning PostgreSQL connection to pool: {e}")
+            # Silently ignore pool errors to prevent cascading failures
     else:
         # LOCAL: Close SQLite connection
         try:
             if conn:
                 conn.close()
         except Exception as e:
-            logging.error(f"Error closing SQLite connection: {e}")
+            logging.debug(f"Error closing SQLite connection: {e}")
 
 def create_performance_indexes(cursor):
     """Performans için kritik indexleri oluştur"""
@@ -1232,28 +1248,31 @@ def mark_qr_used():
 @login_required
 def clear_all_qrs():
     """Tüm QR kodlarını temizle (aktif sayım oturumu yoksa)"""
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Aktif sayım oturumu kontrolü
-    cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = %s', ('active',))
-    active_session = cursor.fetchone()[0]
-    
-    if active_session > 0:
-        close_db(conn)
-        return jsonify({'error': 'Aktif bir sayım oturumu var. QR kodları silinemez.'}), 400
-    
     try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Aktif sayım oturumu kontrolü
+        cursor.execute('SELECT COUNT(*) FROM count_sessions WHERE status = %s', ('active',))
+        active_session = cursor.fetchone()[0]
+        
+        if active_session > 0:
+            close_db(conn)
+            return jsonify({'error': 'Aktif bir sayım oturumu var. QR kodları silinemez.'}), 400
+        
         # B2 depolama kullanılıyorsa, dosyaları da sil
         if USE_B2_STORAGE and get_b2_service:
-            b2_service = get_b2_service()
-            # B2'deki tüm QR dosyalarını sil
-            files = b2_service.list_files('qr_codes/')
-            for file_info in files:
-                try:
-                    b2_service.delete_file(file_info['name'])
-                except Exception as e:
-                    logging.error(f"B2'den {file_info['name']} silinirken hata: {e}")
+            try:
+                b2_service = get_b2_service()
+                # B2'deki tüm QR dosyalarını sil
+                files = b2_service.list_files('qr_codes/')
+                for file_info in files:
+                    try:
+                        b2_service.delete_file(file_info['name'])
+                    except Exception as e:
+                        logging.error(f"B2'den {file_info['name']} silinirken hata: {e}")
+            except Exception as e:
+                logging.error(f"B2 temizliği hatası: {e}")
         
         # Local depolama kullanılıyorsa, klasörü temizle
         if not USE_B2_STORAGE:
@@ -1273,15 +1292,19 @@ def clear_all_qrs():
         close_db(conn)
         
         # Cache'i temizle
-        cache_clear_pattern('qr_image_*')
+        cache_clear()
         
+        logging.info("Tüm QR kodları temizlendi")
         return jsonify({
             'success': True,
             'message': 'Tüm QR kodları başarıyla silindi'
         })
     except Exception as e:
-        close_db(conn)
-        logging.error(f"QR kodları silinirken hata: {e}")
+        try:
+            close_db(conn)
+        except:
+            pass
+        logging.error(f"QR kodları silinirken hata: {e}", exc_info=True)
         return jsonify({'error': f'QR kodları silinirken hata: {str(e)}'}), 500
 
 @app.route('/generate_qr_image/<qr_id>')

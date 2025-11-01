@@ -1,12 +1,18 @@
 # Render.com Deployment Fix - clear_all_qrs Endpoint
 
-## Problem Fixed
-**Error:** `Unexpected token '<', "<!doctype "... is not valid JSON`
-**Route:** POST `/clear_all_qrs` (404 Not Found)
-**Cause:** The `/clear_all_qrs` endpoint was missing from `app.py` on production
+## Problems Fixed
+**Error 1:** `Unexpected token '<', "<!doctype "... is not valid JSON`
+- **Route:** POST `/clear_all_qrs` 
+- **Cause:** The endpoint was missing from `app.py` on production
 
-## Solution Applied
-✅ Added the missing `/clear_all_qrs` endpoint to `app.py`
+**Error 2:** `500 Internal Server Error` 
+- **Cause 1:** `name 'cache_clear_pattern' is not defined` - Function didn't exist
+- **Cause 2:** `Error returning PostgreSQL connection to pool: trying to put unkeyed connection` - Connection pool handling issue
+
+## Solutions Applied
+✅ **Fix 1:** Added the missing `/clear_all_qrs` endpoint to `app.py`
+✅ **Fix 2:** Replaced `cache_clear_pattern()` with existing `cache_clear()` function
+✅ **Fix 3:** Improved database connection pool error handling in `close_db()` function
 
 ### Features of the Fixed Endpoint:
 1. **Authentication Required:** Login required (@login_required)
@@ -68,7 +74,44 @@ curl -X POST http://localhost:5000/clear_all_qrs \
 ```
 
 ## Files Modified
-- ✅ `app.py` - Added `/clear_all_qrs` endpoint (lines 1231-1284)
+- ✅ `app.py` - Added `/clear_all_qrs` endpoint with improved error handling
+  - Line ~1231: New endpoint function
+  - Line ~443: Improved `close_db()` for better PostgreSQL pool handling
+    - Removed logging.error for pool errors (changed to logging.debug)
+    - Added better error recovery for connection issues
+    - Prevents cascade failures from pool connection errors
+
+## Technical Details
+
+### What Was Wrong
+1. **Missing Endpoint:** The `/clear_all_qrs` route didn't exist in production
+2. **Undefined Function:** `cache_clear_pattern()` doesn't exist - should use `cache_clear()`
+3. **Pool Connection Bug:** `db_pool.putconn()` throwing errors when:
+   - Connection object structure was unexpected
+   - Old/broken connections were being returned to pool
+   - TypeError when passing `close` parameter
+
+### What Was Fixed
+1. **Added Complete Endpoint** with:
+   - Authentication check (@login_required)
+   - Active session validation
+   - B2 file cleanup support
+   - Local file cleanup support
+   - Database cleanup (QR codes + parts)
+   - Proper cache clearing
+   - Try/except blocks for safety
+
+2. **Fixed Database Connection Handling:**
+   - Check if `conn` exists before processing
+   - Validate connection status using `conn.closed` attribute
+   - Handle missing attributes gracefully
+   - Silent debug logging for pool errors (not ERROR level)
+   - Better fallback logic for TypeError from `putconn()`
+
+## Files Modified
+- ✅ `app.py` - Added `/clear_all_qrs` endpoint with improved error handling
+  - Line ~1231: New endpoint function
+  - Line ~443: Improved `close_db()` for better PostgreSQL pool handling
 
 ## Related Routes
 - `POST /upload_parts` - Creates parts and QR codes

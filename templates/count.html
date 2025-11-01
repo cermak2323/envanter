@@ -1058,6 +1058,75 @@
         // debug / debounce for QR decoding
         let lastDecoded = null;
         let lastDecodedAt = 0; // epoch ms
+        
+        // 🎵 Duplicate QR detection & sound system
+        let scannedQRsInSession = new Set(); // Track all scanned QRs in this session
+        const duplicateAlertSounds = {
+            success: null,  // Will be initialized
+            duplicate: null,
+            error: null
+        };
+        
+        // Initialize audio system
+        function initAudioSystem() {
+            // Create success sound using Web Audio API (beep)
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Success sound: two short beeps
+            window.playSuccessSound = function() {
+                try {
+                    const now = audioContext.currentTime;
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    
+                    // Beep parameters
+                    osc.frequency.value = 800; // Hz
+                    gain.gain.setValueAtTime(0.3, now);
+                    
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    
+                    // Second beep
+                    osc.start(now + 0.15);
+                    osc.stop(now + 0.25);
+                } catch (e) {
+                    console.warn('🔊 Ses sistemi başarısız:', e);
+                }
+            };
+            
+            // Duplicate sound: low warning beep
+            window.playDuplicateSound = function() {
+                try {
+                    const now = audioContext.currentTime;
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    
+                    osc.frequency.value = 300; // Lower frequency
+                    gain.gain.setValueAtTime(0.2, now);
+                    
+                    osc.start(now);
+                    osc.stop(now + 0.4); // Longer beep
+                } catch (e) {
+                    console.warn('🔊 Ses sistemi başarısız:', e);
+                }
+            };
+        }
+        
+        // Call on page load
+        setTimeout(() => {
+            try {
+                initAudioSystem();
+                console.log('🔊 Ses sistemi başlatıldı');
+            } catch (e) {
+                console.warn('⚠️ Ses sistemi başlatılamadı');
+            }
+        }, 500);
 
         // Sayfa yüklendiğinde
         document.addEventListener('DOMContentLoaded', function() {
@@ -1105,6 +1174,42 @@
 
         socket.on('scan_result', function(data) {
             console.log('📨 scan_result alındı:', data);
+            
+            // Extract QR ID from data
+            const qrId = data.qr_id || data.item_id;
+            
+            // Check for duplicate QR in this session
+            if (qrId && scannedQRsInSession.has(qrId)) {
+                console.warn('⚠️ DUPLICATE QR DETECTED:', qrId);
+                // Play duplicate sound
+                if (window.playDuplicateSound) {
+                    window.playDuplicateSound();
+                }
+                
+                addScanMessage({
+                    success: false,
+                    message: `❌ BU QR ZATen OKUNMUŞ: ${qrId} (Çift tarama engellendi!)`
+                });
+                return; // Don't process duplicate
+            }
+            
+            // This is a new QR - track it
+            if (qrId) {
+                scannedQRsInSession.add(qrId);
+                console.log(`✅ QR kaydedildi - Toplam: ${scannedQRsInSession.size}`);
+            }
+            
+            // Play success sound
+            if (window.playSuccessSound) {
+                window.playSuccessSound();
+            }
+            
+            // Add visual confirmation
+            addScanMessage({
+                success: true,
+                message: `✅ QR BAŞARIYLA OKUNDU: ${qrId}`
+            });
+            
             addScanMessage(data);
             if (data.success) {
                 updateStats(data);
@@ -1409,6 +1514,7 @@
                 
                 let frameCount = 0;
                 let decodeAttempts = 0;
+                let skipFrames = 0; // Performance optimization - skip some frames
                 const captureInterval = setInterval(() => {
                     if (!fallbackScanRunning) {
                         clearInterval(captureInterval);
@@ -1418,6 +1524,12 @@
                     try {
                         // Capture frame only if video is ready
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            // Performance optimization: skip every 2nd frame to reduce CPU usage
+                            skipFrames++;
+                            if (skipFrames % 2 === 0) {
+                                return; // Skip this frame
+                            }
+                            
                             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                             
                             try {
@@ -1431,12 +1543,34 @@
                                     const decodedText = code.data;
                                     console.log('✅ FALLBACK QR DECODED (jsQR):', decodedText);
                                     console.log('🎯 QR Location:', code.location);
+                                    
+                                    // Check for duplicate BEFORE processing
+                                    if (scannedQRsInSession.has(decodedText)) {
+                                        console.warn('⚠️ DUPLICATE QR DETECTED:', decodedText);
+                                        if (window.playDuplicateSound) {
+                                            window.playDuplicateSound();
+                                        }
+                                        addScanMessage({
+                                            success: false,
+                                            message: `❌ BU QR ZATen OKUNMUŞ: ${decodedText}`
+                                        });
+                                        // Continue scanning, don't stop
+                                        return;
+                                    }
+                                    
+                                    // Track this QR
+                                    scannedQRsInSession.add(decodedText);
                                     window.__qrDecoded = true;
+                                    
+                                    // Play success sound
+                                    if (window.playSuccessSound) {
+                                        window.playSuccessSound();
+                                    }
                                     
                                     // Process like normal success
                                     if (socket && socket.connected) {
                                         socket.emit('scan_qr', { qr_id: decodedText });
-                                        addScanMessage({ success: true, message: `✅ Fallback (jsQR): ${decodedText}` });
+                                        addScanMessage({ success: true, message: `✅ FALLBACK QR BAŞARIYLA OKUNDU: ${decodedText}` });
                                     }
                                     
                                     // Stop fallback
@@ -1459,14 +1593,14 @@
                     }
                 }, 100); // Capture every 100ms = 10 FPS
                 
-                // Auto-stop after 60 seconds
+                // Auto-stop after 30 seconds (reduced from 60s for faster performance)
                 setTimeout(() => {
                     if (fallbackScanRunning) {
                         console.log('⏱️  Fallback scan timeout - stopping (jsQR mode)');
                         clearInterval(captureInterval);
                         fallbackScanRunning = false;
                     }
-                }, 60000);
+                }, 30000);
                 
             } catch (err) {
                 console.error('❌ Fallback scanning error:', err);
@@ -1730,7 +1864,7 @@
                             console.warn('⚠️ Html5Qrcode decode timeout, starting fallback...');
                             startFallbackQRScanning();
                         }
-                    }, 5000);
+                    }, 2000); // Reduced from 5s to 2s for faster fallback activation
                     
                 } else {
                     // try facingMode if deviceId unavailable

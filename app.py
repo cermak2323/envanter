@@ -2009,7 +2009,8 @@ def handle_scan(data):
         print("DEBUG: count_access yok")
         return
     
-    qr_id = data.get('qr_id')
+    # qr_code veya qr_id parametrelerini kabul et (manuel giriş için qr_code, tarama için qr_id)
+    qr_id = data.get('qr_id') or data.get('qr_code')
     if not qr_id:
         emit('scan_result', {'success': False, 'message': 'QR kod verisi eksik'})
         close_db(conn)

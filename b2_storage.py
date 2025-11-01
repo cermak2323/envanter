@@ -114,9 +114,16 @@ class B2StorageService:
             bytes: Dosya içeriği veya None
         """
         try:
-            file_version = self.bucket.get_file_info_by_name(file_path)
-            download_version = self.b2_api.download_file_by_id(file_version.id_)
-            return download_version.save_to_bytes()
+            # Bucket download_version kullan
+            download_version = self.bucket.download_file_by_name(file_path)
+            
+            # İçeriği bytes olarak oku
+            file_content = b''
+            for data in download_version.iter_content(chunk_size=8192):
+                file_content += data
+            
+            logging.info(f"File downloaded from B2: {file_path} ({len(file_content)} bytes)")
+            return file_content
             
         except Exception as e:
             logging.error(f"B2 download failed for {file_path}: {e}")

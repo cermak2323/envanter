@@ -935,7 +935,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- QR Code Scanner Libraries (dual support) -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqrcode@0.0.20/dist/jsqrcode.min.js"></script>
+    <script src="https://unpkg.com/zxing@0.20.0/umd/index.min.js"></script>
     <script>
         console.log('Count page JavaScript loading...');
         console.log('Sayfa URL:', window.location.href);
@@ -1469,8 +1472,25 @@
 
                 addScanMessage({ success: true, message: 'Kamera başlatıldı. QR kodları okutabilirsiniz.' });
             } catch (err) {
-                console.error('Kamera başlatılamadı:', err);
-                addScanMessage({ success: false, message: 'Kamera başlatılamadı: ' + (err && err.message ? err.message : err) });
+                console.error('❌ Kamera başlatılamadı:', err);
+                console.error('   Error name:', err.name);
+                console.error('   Error message:', err.message);
+                console.error('   Html5Qrcode library loaded:', typeof Html5Qrcode !== 'undefined');
+                
+                let errorMsg = 'Kamera başlatılamadı: ';
+                if (err.message.includes('Permission')) {
+                    errorMsg += 'Kamera izni reddedildi';
+                } else if (err.message.includes('secure context')) {
+                    errorMsg += 'HTTPS veya localhost gerekli';
+                } else if (err.message.includes('NotFound')) {
+                    errorMsg += 'Kamera bulunamadı';
+                } else {
+                    errorMsg += (err && err.message ? err.message.substring(0, 80) : String(err).substring(0, 80));
+                }
+                
+                addScanMessage({ success: false, message: '❌ ' + errorMsg });
+                addScanMessage({ success: true, message: 'İpucu: "Manuel Giriş" butonunu kullanabilirsiniz' });
+                
                 try { if (html5QrCode) { await html5QrCode.stop(); } } catch (_) {}
                 html5QrCode = null;
             }
@@ -1884,8 +1904,85 @@
             </div>
         </div>
 
+        <!-- Manuel QR Giriş Modal -->
+        <div id="manualEntryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; min-width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <h4 style="margin-bottom: 20px; color: #2d3748;">Manuel QR Giriş</h4>
+                <input type="text" id="manualQRInput" placeholder="QR kodu buraya yazın veya yapıştırın..." style="width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-family: monospace;">
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="submitManualQR()" style="padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; flex: 1;">
+                        Gönder
+                    </button>
+                    <button onclick="closeManualEntry()" style="padding: 12px 30px; background: #999; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; flex: 1;">
+                        İptal
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <script>
+            // Manuel Giriş Fonksiyonları
+            function showManualInput() {
+                console.log('📝 Manuel giriş modalı açılıyor');
+                document.getElementById('manualEntryModal').style.display = 'flex';
+                const input = document.getElementById('manualQRInput');
+                if (input) {
+                    input.focus();
+                    input.value = '';
+                }
+            }
+
+            function closeManualEntry() {
+                console.log('✖️ Manuel giriş modalı kapatılıyor');
+                document.getElementById('manualEntryModal').style.display = 'none';
+            }
+
+            function submitManualQR() {
+                const qrValue = document.getElementById('manualQRInput').value.trim();
+                if (!qrValue) {
+                    alert('Lütfen bir QR kodu girin');
+                    return;
+                }
+                console.log('📤 Manuel QR gönderiliyor:', qrValue);
+                closeManualEntry();
+                
+                // QR taraması başarılı gibi işle
+                if (socket && socket.connected) {
+                    console.log('📡 Socket.IO üzerinden QR gönderiliyor');
+                    socket.emit('scan_qr', { qr_code: qrValue }, (response) => {
+                        console.log('✅ Server yanıt verdi:', response);
+                        if (response && response.success) {
+                            addScanMessage({ 
+                                success: true, 
+                                message: '✅ QR başarıyla tarandı: ' + qrValue
+                            });
+                        } else {
+                            addScanMessage({ 
+                                success: false, 
+                                message: '❌ QR işlenemedi: ' + (response ? response.error : 'Bilinmeyen hata')
+                            });
+                        }
+                    });
+                } else {
+                    console.error('❌ Socket.IO bağlı değil');
+                    addScanMessage({ 
+                        success: false, 
+                        message: '❌ Sunucuya bağlanılamadı'
+                    });
+                }
+            }
+
+            // Enter tuşunda gönder
             document.addEventListener('DOMContentLoaded', function() {
+                const input = document.getElementById('manualQRInput');
+                if (input) {
+                    input.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            submitManualQR();
+                        }
+                    });
+                }
+
                 const confirmBtn = document.getElementById('confirmFinishBtn');
                 confirmBtn && confirmBtn.addEventListener('click', async function() {
                     const modalEl = document.getElementById('finishCountModal');

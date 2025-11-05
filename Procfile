@@ -1,1 +1,1 @@
-web: python render_launcher.py
+web: gunicorn -k eventlet -w 1 --log-file - --log-level info "app:app"

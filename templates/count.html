@@ -1938,7 +1938,23 @@
         // 🚀 INITIALIZE ULTRA SCANNER SYSTEM
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🚀 DOM Ready - Initializing...');
-            initAudioSystem();
+
+            // Don't create AudioContext until user interacts (prevents SecurityError in some browsers).
+            // Initialize audio on first user gesture and mark that the user interacted so vibration/sounds are allowed.
+            window.userHasInteracted = false;
+            function onFirstUserGesture() {
+                try {
+                    window.userHasInteracted = true;
+                    initAudioSystem();
+                    console.log('🔊 Audio initialized after user gesture');
+                } catch (e) {
+                    console.warn('🔊 Audio initialization after gesture failed:', e);
+                }
+                document.removeEventListener('click', onFirstUserGesture);
+                document.removeEventListener('touchstart', onFirstUserGesture);
+            }
+            document.addEventListener('click', onFirstUserGesture, { once: true });
+            document.addEventListener('touchstart', onFirstUserGesture, { once: true });
 
             // RADIKAL FIX: KAMERA SADECE MOBILDE, PC'DE TAMAMEN KAPALI
             const isMobile = window.innerWidth <= 768;
@@ -2140,29 +2156,7 @@
             }
         }
 
-        async function loadSessionStats() {
-            try {
-                const response = await fetch('/get_session_stats');
-                const data = await response.json();
-
-                sessionStats.scanned = data.scanned || 0;
-                sessionStats.expected = data.expected || 0;
-
-                // OKUNMUŞ QR'LARI YÜK - Duplicate kontrolü için
-                if (data.scanned_qrs && Array.isArray(data.scanned_qrs)) {
-                    scannedQRsInSession.clear();
-                    data.scanned_qrs.forEach(qr => {
-                        scannedQRsInSession.add(qr);
-                    });
-                    console.log(`✅ ${scannedQRsInSession.size} adet okunmuş QR yüklendi (duplicate kontrolü için)`);
-                }
-
-                updateStatsDisplay();
-                loadRecentActivities();
-            } catch (error) {
-                console.error('İstatistikler yüklenirken hata:', error);
-            }
-        }
+        // loadSessionStats is defined later in this file (consolidated implementation)
 
         async function loadRecentActivities() {
             console.log('🔍 loadRecentActivities() başlatıldı');
@@ -3044,13 +3038,22 @@
             try {
                 const response = await fetch('/get_session_stats');
                 const data = await response.json();
+                console.log('📥 /get_session_stats raw response:', data);
                 if (data.success) {
                     // API'den gelen data yapısını düzelt
                     sessionStats = {
                         scanned: data.scanned || 0,
                         expected: data.expected || 0,
-                        scannedItems: []
+                        scannedItems: [],
+                        startTime: data.created_at ? new Date(data.created_at) : sessionStats.startTime
                     };
+
+                    // Eğer scanned_qrs listesi geliyorsa duplicate kontrol kümesini güncelle
+                    if (data.scanned_qrs && Array.isArray(data.scanned_qrs)) {
+                        scannedQRsInSession.clear();
+                        data.scanned_qrs.forEach(q => scannedQRsInSession.add(q));
+                        console.log(`✅ ${scannedQRsInSession.size} scanned_qrs loaded into session set`);
+                    }
                     updateStatsDisplay();
                 } else {
                     console.warn('Session stats boş veya geçersiz:', data);

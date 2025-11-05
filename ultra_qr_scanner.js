@@ -604,23 +604,29 @@ class UltraQRScanner {
     
     playSuccessSound() {
         try {
-            // 🔧 Create success beep sound
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Use a shared AudioContext to avoid creating one per-scan and to respect browser policies
+            const audioContext = window.sharedAudioContext || (window.sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)());
+
+            // If the context is suspended (browsers require gesture), resume only when user has interacted.
+            if (audioContext.state === 'suspended' && window.userHasInteracted) {
+                audioContext.resume().catch(e => console.warn('AudioContext resume failed:', e));
+            }
+
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
             oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
-            
+
             gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-            
+
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.3);
-            
+
             console.log('🔊 Success sound played');
         } catch (error) {
             console.warn('🔇 Could not play sound:', error.message);

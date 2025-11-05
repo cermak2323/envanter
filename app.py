@@ -845,6 +845,11 @@ def index():
     # Aktif sayım yoksa normal ana sayfayı göster
     return render_template('index.html')
 
+
+# Note: a more comprehensive /health endpoint is defined later in this file.
+# The detailed health check includes DB and storage checks and will be used by
+# load balancers and Render readiness probes.
+
 @app.route('/api/dashboard/stats')
 @login_required
 def dashboard_stats():
@@ -1774,30 +1779,38 @@ def process_qr_scan_ultra(qr_id, session_id):
 
         # Ultra session management - ensure session exists with better naming
         session_name = f"Tarama Seansı {session_id}"
-        execute_query(cursor, """
-            INSERT INTO count_sessions (session_id, status, started_at) 
-            VALUES (%s, %s, %s) 
-            ON CONFLICT (session_id) DO NOTHING
-        """, (str(session_id), 'active', datetime.now()))
+
+        # Defensive: check if session row exists, then insert using DB-agnostic columns
+        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions WHERE session_id = %s', (str(session_id),))
+        _exists = cursor.fetchone()[0]
+        if not _exists:
+            try:
+                # Try inserting using columns common to both SQLite and Postgres
+                execute_query(cursor, 'INSERT INTO count_sessions (session_id, is_active, started_at, created_at) VALUES (%s, %s, %s, %s)', (str(session_id), True, datetime.now(), datetime.now()))
+            except Exception:
+                # Fallback for SQLite dialect if above fails
+                try:
+                    execute_query(cursor, 'INSERT OR IGNORE INTO count_sessions (session_id, is_active, started_at, created_at) VALUES (%s, %s, %s, %s)', (str(session_id), True, datetime.now(), datetime.now()))
+                except Exception as e:
+                    print(f"⚠️ Failed to create count_sessions row for {session_id}: {e}")
 
         # Check if QR exists with enhanced data retrieval
-        execute_query(cursor, """
-            SELECT qr_id, part_code, part_name, is_used, created_at
-            FROM qr_codes 
-            WHERE qr_id = %s
-        """, (qr_id,))
-
-        qr_data = cursor.fetchone()
+        qr_data = None
+        try:
+            execute_query(cursor, """
+                SELECT qr_id, part_code, part_name, is_used, created_at
+                FROM qr_codes 
+                WHERE qr_id = %s
+            """, (qr_id,))
+            qr_data = cursor.fetchone()
+        except Exception as e:
+            # Schema mismatch or missing column in older DBs - fall back to defaults
+            print(f"⚠️ QR lookup failed (schema mismatch?): {e}")
+            qr_data = None
 
         if not qr_data:
-            # Auto-create unknown QR for tracking
+            # Do NOT attempt to modify the schema here. Use a safe fallback QR record in-memory.
             unknown_name = f"Bilinmeyen Ürün ({qr_id[:8]})"
-            execute_query(cursor, """
-                INSERT INTO qr_codes (qr_id, part_code, part_name, is_used, created_at)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (qr_id) DO NOTHING
-            """, (qr_id, qr_id[:10], unknown_name, False, datetime.now()))
-
             qr_data = (qr_id, qr_id[:10], unknown_name, False, datetime.now())
 
         qr_id_db, part_code, part_name, is_used, created_at = qr_data
@@ -1822,17 +1835,32 @@ def process_qr_scan_ultra(qr_id, session_id):
                 }
 
         # Insert ultra scan record with enhanced data
-        execute_query(cursor, """
-            INSERT INTO scanned_qr (qr_id, session_id, part_code, scanned_by, scanned_at)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (qr_id, str(session_id), part_code, session.get('user_id', 1), datetime.now()))
+        try:
+            execute_query(cursor, """
+                INSERT INTO scanned_qr (qr_id, session_id, part_code, scanned_by, scanned_at)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (qr_id, str(session_id), part_code, session.get('user_id', 1), datetime.now()))
+        except Exception:
+            # Fallback for older schemas without part_code column
+            try:
+                execute_query(cursor, """
+                    INSERT INTO scanned_qr (qr_id, session_id, scanned_by, scanned_at)
+                    VALUES (%s, %s, %s, %s)
+                """, (qr_id, str(session_id), session.get('user_id', 1), datetime.now()))
+            except Exception as ie:
+                print(f"❌ Failed to insert scanned_qr record: {ie}")
+                raise
 
-        # Mark QR as used with timestamp (DB-agnostic)
-        execute_query(cursor, """
-            UPDATE qr_codes 
-            SET is_used = %s, used_at = %s 
-            WHERE qr_id = %s
-        """, (True, datetime.now(), qr_id))
+        # Mark QR as used with timestamp (DB-agnostic) - ignore if schema doesn't match
+        try:
+            execute_query(cursor, """
+                UPDATE qr_codes 
+                SET is_used = %s, used_at = %s 
+                WHERE qr_id = %s
+            """, (True, datetime.now(), qr_id))
+        except Exception:
+            # Not critical if the QR table lacks these columns in older schemas
+            pass
 
         # Get enhanced session statistics
         execute_query(cursor, """
@@ -2581,25 +2609,50 @@ def get_session_stats():
     try:
         conn = get_db()
         cursor = conn.cursor()
-        
-        # Toplam session sayısı
-        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions')
-        total = cursor.fetchone()[0]
-        
-        # Aktif session sayısı
-        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions WHERE is_active = %s', (True,))
-        active = cursor.fetchone()[0]
-        
-        # Tamamlanmış session sayısı
-        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions WHERE is_active = %s', (False,))
-        completed = cursor.fetchone()[0]
-        
+
+        # Find current active session
+        execute_query(cursor, '''
+            SELECT session_id, total_expected, total_scanned
+            FROM count_sessions
+            WHERE is_active = %s
+            ORDER BY started_at DESC
+            LIMIT 1
+        ''', (True,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            close_db(conn)
+            # Return a shape the client expects (success flag + zeros)
+            return jsonify({'success': False, 'message': 'No active session', 'scanned': 0, 'expected': 0, 'scanned_qrs': []})
+
+        session_id = row[0]
+        total_expected = row[1] if row[1] is not None else 0
+        total_scanned = row[2] if row[2] is not None else 0
+
+        # Get list of scanned QR ids for this session (most recent first, limit to 500)
+        execute_query(cursor, '''
+            SELECT qr_id
+            FROM scanned_qr
+            WHERE session_id = %s
+            ORDER BY scanned_at DESC
+            LIMIT 500
+        ''', (session_id,))
+
+        scanned_rows = cursor.fetchall()
+        scanned_qrs = [r[0] for r in scanned_rows] if scanned_rows else []
+
+        # Count scanned (fallback to count of scanned_qrs if total_scanned not set)
+        scanned_count = total_scanned if total_scanned else len(scanned_qrs)
+
         close_db(conn)
-        
+
         return jsonify({
-            'total': total,
-            'active': active,
-            'completed': completed
+            'success': True,
+            'session_id': session_id,
+            'scanned': scanned_count,
+            'expected': total_expected,
+            'scanned_qrs': scanned_qrs
         })
     except Exception as e:
         logging.error(f"Error in get_session_stats: {e}")

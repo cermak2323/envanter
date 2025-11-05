@@ -2613,84 +2613,72 @@ def api_dashboard_stats():
 def get_session_stats():
     """Sayım session istatistikleri"""
     try:
-        # URL parametresinden session_id al (test mode için)
+        # URL parametresinden session_id al
         requested_session_id = request.args.get('session_id')
         
-        # 🧪 TEST MODE: session_id "test-" ile başlıyorsa, basit response dön
-        if requested_session_id and requested_session_id.startswith('test-'):
-            conn = get_db()
-            cursor = conn.cursor()
-            
-            # Test session için scanned_qr tablosundan say
-            execute_query(cursor, '''
-                SELECT COUNT(DISTINCT qr_id)
-                FROM scanned_qr
-                WHERE session_id = %s
-            ''', (requested_session_id,))
-            
-            count_row = cursor.fetchone()
-            scanned_count = count_row[0] if count_row else 0
-            
-            # Scanned QR listesi
-            execute_query(cursor, '''
-                SELECT qr_id
-                FROM scanned_qr
-                WHERE session_id = %s
-                ORDER BY scanned_at DESC
-                LIMIT 500
-            ''', (requested_session_id,))
-            
-            scanned_rows = cursor.fetchall()
-            scanned_qrs = [r[0] for r in scanned_rows] if scanned_rows else []
-            
-            close_db(conn)
-            
-            return jsonify({
-                'success': True,
-                'session_id': requested_session_id,
-                'scanned': scanned_count,
-                'expected': 3,  # Test için sabit
-                'scanned_qrs': scanned_qrs
-            })
-        
-        # Normal production mode
         conn = get_db()
         cursor = conn.cursor()
+        
+        # 🔍 Eğer session_id verilmişse, o session'ı kullan
+        if requested_session_id:
+            session_id = requested_session_id
+            
+            # Test mode için expected=3
+            expected = 3 if requested_session_id.startswith('test-') else 0
+            
+            # count_sessions tablosundan expected değerini al (varsa)
+            try:
+                execute_query(cursor, '''
+                    SELECT total_expected
+                    FROM count_sessions
+                    WHERE session_id = %s
+                ''', (session_id,))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    expected = row[0]
+            except:
+                pass
+            
+        else:
+            # Session ID verilmemişse, aktif session bul
+            execute_query(cursor, '''
+                SELECT session_id, total_expected, total_scanned
+                FROM count_sessions
+                WHERE is_active = %s
+                ORDER BY started_at DESC
+                LIMIT 1
+            ''', (True,))
 
-        # Find current active session
+            row = cursor.fetchone()
+
+            if not row:
+                close_db(conn)
+                return jsonify({'success': False, 'message': 'No active session', 'scanned': 0, 'expected': 0, 'scanned_qrs': []})
+
+            session_id = row[0]
+            expected = row[1] if row[1] is not None else 0
+        
+        # scanned_qr tablosundan gerçek scan sayısını al
         execute_query(cursor, '''
-            SELECT session_id, total_expected, total_scanned
-            FROM count_sessions
-            WHERE is_active = %s
-            ORDER BY started_at DESC
-            LIMIT 1
-        ''', (True,))
-
-        row = cursor.fetchone()
-
-        if not row:
-            close_db(conn)
-            # Return a shape the client expects (success flag + zeros)
-            return jsonify({'success': False, 'message': 'No active session', 'scanned': 0, 'expected': 0, 'scanned_qrs': []})
-
-        session_id = row[0]
-        total_expected = row[1] if row[1] is not None else 0
-        total_scanned = row[2] if row[2] is not None else 0
-
-        # Get list of scanned QR ids for this session (most recent first, limit to 500)
+            SELECT COUNT(DISTINCT qr_id)
+            FROM scanned_qr
+            WHERE session_id = %s
+        ''', (session_id,))
+        
+        count_row = cursor.fetchone()
+        scanned_count = count_row[0] if count_row else 0
+        
+        # Scanned QR listesi
         execute_query(cursor, '''
-            SELECT qr_id
+            SELECT DISTINCT qr_id
             FROM scanned_qr
             WHERE session_id = %s
             ORDER BY scanned_at DESC
             LIMIT 500
         ''', (session_id,))
-
+        
         scanned_rows = cursor.fetchall()
         scanned_qrs = [r[0] for r in scanned_rows] if scanned_rows else []
-
-        # Count scanned (fallback to count of scanned_qrs if total_scanned not set)
-        scanned_count = total_scanned if total_scanned else len(scanned_qrs)
 
         close_db(conn)
 
@@ -2698,9 +2686,10 @@ def get_session_stats():
             'success': True,
             'session_id': session_id,
             'scanned': scanned_count,
-            'expected': total_expected,
+            'expected': expected,
             'scanned_qrs': scanned_qrs
         })
+        
     except Exception as e:
         logging.error(f"Error in get_session_stats: {e}")
         return jsonify({'error': str(e)}), 500

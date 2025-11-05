@@ -637,6 +637,47 @@ def init_db():
                 except Exception as e:
                     print(f"⚠️ Migration warning: {e}")
 
+                # 🔧 DATABASE MIGRATION: Add total_expected and total_scanned columns to count_sessions
+                try:
+                    conn = get_db()
+                    cursor = conn.cursor()
+
+                    # Check total_expected
+                    execute_query(cursor, """
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='count_sessions' AND column_name='total_expected'
+                    """)
+                    if not cursor.fetchone():
+                        print("🔧 Adding total_expected column to count_sessions table...")
+                        execute_query(cursor, """
+                            ALTER TABLE count_sessions
+                            ADD COLUMN total_expected INTEGER DEFAULT 0
+                        """)
+                        conn.commit()
+                        print("✅ total_expected column added successfully")
+                    else:
+                        print("✅ total_expected column already exists")
+
+                    # Check total_scanned
+                    execute_query(cursor, """
+                        SELECT column_name FROM information_schema.columns
+                        WHERE table_name='count_sessions' AND column_name='total_scanned'
+                    """)
+                    if not cursor.fetchone():
+                        print("🔧 Adding total_scanned column to count_sessions table...")
+                        execute_query(cursor, """
+                            ALTER TABLE count_sessions
+                            ADD COLUMN total_scanned INTEGER DEFAULT 0
+                        """)
+                        conn.commit()
+                        print("✅ total_scanned column added successfully")
+                    else:
+                        print("✅ total_scanned column already exists")
+
+                    close_db(conn)
+                except Exception as e:
+                    print(f"⚠️ Migration warning (total_*): {e}")
+
                 # Verify scanned_qr table specifically (critical for duplicate detection)
                 if 'scanned_qr' in existing_tables or 'scanned_qr' not in missing_tables:
                     print("✅ scanned_qr table verified - duplicate detection will work")
@@ -1632,15 +1673,14 @@ def handle_scan_radical(data):
             emit('scan_result', {'success': False, 'message': f'⚠️ {part_name} zaten sayıldı!', 'duplicate': True}, broadcast=True)
             return
 
+        # Insert scan record
+        execute_query(cursor, 
+            'INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by, scanned_at) VALUES (%s, %s, %s, %s, %s)',
+            (str(session_id), qr_id, part_code, user_id, datetime.now()))
 
-            # Insert scan record
-            execute_query(cursor, 
-                'INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by, scanned_at) VALUES (%s, %s, %s, %s, %s)',
-                (str(session_id), qr_id, part_code, user_id, datetime.now()))
-
-            # Mark QR as used
-            execute_query(cursor, 'UPDATE qr_codes SET is_used = %s, used_at = %s WHERE qr_id = %s',
-                         (True, datetime.now(), qr_id))
+        # Mark QR as used
+        execute_query(cursor, 'UPDATE qr_codes SET is_used = %s, used_at = %s WHERE qr_id = %s',
+                     (True, datetime.now(), qr_id))
 
         conn.commit()
         close_db(conn)
@@ -1666,6 +1706,20 @@ def handle_scan_radical(data):
             'scanned_by': user_name,
             'scanned_at': datetime.now().strftime('%H:%M:%S')
         }
+
+        # Update count_sessions.total_scanned for dashboard consistency
+        try:
+            conn3 = get_db()
+            cursor3 = conn3.cursor()
+            execute_query(cursor3, 'SELECT COUNT(*) FROM scanned_qr WHERE session_id = %s', (str(session_id),))
+            total_scans = cursor3.fetchone()[0]
+            execute_query(cursor3, 'UPDATE count_sessions SET total_scanned = %s WHERE session_id = %s', (total_scans, str(session_id)))
+            conn3.commit()
+            close_db(conn3)
+            success_data['total_scans'] = total_scans
+        except Exception:
+            # non-fatal
+            pass
 
         socketio.emit('scan_result', success_data, broadcast=True)
         socketio.emit('qr_scanned', success_data, broadcast=True)
@@ -1792,6 +1846,12 @@ def process_qr_scan_ultra(qr_id, session_id):
         stats = cursor.fetchone()
         total_scans = stats[0] if stats else 0
         unique_items = stats[1] if stats else 0
+
+        # Update count_sessions.total_scanned for dashboard
+        try:
+            execute_query(cursor, 'UPDATE count_sessions SET total_scanned = %s WHERE session_id = %s', (total_scans, str(session_id)))
+        except Exception:
+            pass
 
         conn.commit()
 

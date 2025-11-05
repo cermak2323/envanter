@@ -72,6 +72,9 @@ class CountSession(db.Model):
     started_at = db.Column(db.DateTime)
     ended_at = db.Column(db.DateTime)
     description = db.Column(db.Text)
+    # Summary counts
+    total_expected = db.Column(db.Integer, default=0)
+    total_scanned = db.Column(db.Integer, default=0)
     
     # İlişkiler
     scanned_items = db.relationship('ScannedQR', backref='session', lazy=True, cascade='all, delete-orphan')

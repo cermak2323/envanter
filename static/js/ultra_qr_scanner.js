@@ -3,6 +3,11 @@
 En iyi kütüphaneler ve modern teknolojilerle
 */
 
+// 🔧 Global Set - Bir sayımda okunan tüm QR'ları takip eder
+if (typeof window.scannedQRsInSession === 'undefined') {
+    window.scannedQRsInSession = new Set();
+}
+
 class UltraQRScanner {
     constructor() {
         this.isScanning = false;
@@ -268,6 +273,21 @@ class UltraQRScanner {
                     0% { top: 0; opacity: 1; }
                     50% { opacity: 1; }
                     100% { top: calc(100% - 3px); opacity: 0; }
+                }
+                
+                @keyframes pulse {
+                    0% { 
+                        transform: scale(0.8);
+                        opacity: 0;
+                    }
+                    50% { 
+                        transform: scale(1.1);
+                        opacity: 1;
+                    }
+                    100% { 
+                        transform: scale(1);
+                        opacity: 1;
+                    }
                 }
                 
                 @keyframes ultraBounce {
@@ -545,15 +565,42 @@ class UltraQRScanner {
     handleQRDetected(qrData) {
         const now = Date.now();
         
-        // 🔧 Aggressive spam prevention - 3 second cooldown
-        if (qrData === this.lastScan && (now - this.lastScanTime) < 3000) {
-            console.log('⚠️ Cooldown active, ignoring duplicate QR');
-            return;
+        // 🔧 KALICI DUPLICATE KONTROLÜ - Bir sayımda bir QR sadece 1 kez okunabilir
+        if (window.scannedQRsInSession.has(qrData)) {
+            console.log('⚠️ Bu QR zaten okundu, tekrar okuma engellendi');
+            
+            // Kullanıcıya bildir
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0; left: 0;
+                width: 100vw; height: 100vh;
+                background: rgba(255, 0, 0, 0.95);
+                z-index: 999999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            overlay.innerHTML = `
+                <div style="
+                    font-size: 60px;
+                    color: white;
+                    font-weight: bold;
+                    text-align: center;
+                ">
+                    ⚠️<br>
+                    ZATEN OKUNDU
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => overlay.remove(), 1500);
+            
+            return; // Sunucuya gönderme, direkt çık
         }
         
-        // 🔧 Global scanning pause to prevent multiple reads
+        // 🔧 İşlem kilidi kontrolü
         if (this.isProcessing) {
-            console.log('⚠️ Already processing QR, ignoring');
+            console.log('⚠️ QR işleniyor, lütfen bekle');
             return;
         }
         
@@ -562,13 +609,68 @@ class UltraQRScanner {
         this.lastScanTime = now;
         this.scanCount++;
         
-        console.log('🎯 QR Detected:', qrData);
+        console.log('🎯 QR Algılandı:', qrData);
         
-        // 🔧 FULL SCREEN BLACKOUT + FEEDBACK
-        this.showFullScreenFeedback(qrData);
+        // 🔧 TAM EKRAN YEŞİL MESAJ + SES
+        this.showSimpleGreenFeedback(qrData);
         
-        // Send to server
+        // ✅ Set'e ekle (kalıcı)
+        window.scannedQRsInSession.add(qrData);
+        console.log('📝 QR Sete eklendi. Toplam:', window.scannedQRsInSession.size);
+        
+        // Sunucuya gönder
         this.sendQRToServer(qrData);
+        
+        // 2 saniye sonra işlemi bitir (yeni QR okumaya hazır ol)
+        setTimeout(() => {
+            this.isProcessing = false;
+        }, 2000);
+    }
+    
+    showSimpleGreenFeedback(qrData) {
+        // 🔧 BASİT TAM EKRAN YEŞİL MESAJ
+        const overlay = document.createElement('div');
+        overlay.id = 'simple-qr-feedback';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #000000;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        `;
+        
+        overlay.innerHTML = `
+            <div style="
+                font-size: 80px;
+                color: #00ff00;
+                font-weight: bold;
+                text-align: center;
+                animation: pulse 0.5s ease;
+            ">
+                ✅<br>
+                QR OKUNDU
+            </div>
+        `;
+        
+        // Eski overlay varsa kaldır
+        const oldOverlay = document.getElementById('simple-qr-feedback');
+        if (oldOverlay) oldOverlay.remove();
+        
+        document.body.appendChild(overlay);
+        
+        // 🔧 Ses çal
+        this.playSuccessSound();
+        
+        // 1.5 saniye sonra kaldır
+        setTimeout(() => {
+            if (overlay.parentNode) {
+                overlay.remove();
+            }
+        }, 1500);
     }
     
     showFullScreenFeedback(qrData) {

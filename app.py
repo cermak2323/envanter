@@ -935,6 +935,12 @@ def count_page():
         close_db(conn)
         return render_template('count.html')
 
+# 🧪 TEST ROUTE - Kamera olmadan QR testi
+@app.route('/test-qr')
+def test_qr_simple():
+    """Kamera olmadan basit QR okuma testi"""
+    return render_template('test_qr_simple.html')
+
     # Şifre doğrulaması yapılmışsa count_access session var mı kontrol et
     print(f"DEBUG /count: session.get('count_access') = {session.get('count_access')}")  # DEBUG
     print(f"DEBUG /count: session keys = {list(session.keys())}")  # DEBUG
@@ -2607,6 +2613,47 @@ def api_dashboard_stats():
 def get_session_stats():
     """Sayım session istatistikleri"""
     try:
+        # URL parametresinden session_id al (test mode için)
+        requested_session_id = request.args.get('session_id')
+        
+        # 🧪 TEST MODE: session_id "test-" ile başlıyorsa, basit response dön
+        if requested_session_id and requested_session_id.startswith('test-'):
+            conn = get_db()
+            cursor = conn.cursor()
+            
+            # Test session için scanned_qr tablosundan say
+            execute_query(cursor, '''
+                SELECT COUNT(DISTINCT qr_id)
+                FROM scanned_qr
+                WHERE session_id = %s
+            ''', (requested_session_id,))
+            
+            count_row = cursor.fetchone()
+            scanned_count = count_row[0] if count_row else 0
+            
+            # Scanned QR listesi
+            execute_query(cursor, '''
+                SELECT qr_id
+                FROM scanned_qr
+                WHERE session_id = %s
+                ORDER BY scanned_at DESC
+                LIMIT 500
+            ''', (requested_session_id,))
+            
+            scanned_rows = cursor.fetchall()
+            scanned_qrs = [r[0] for r in scanned_rows] if scanned_rows else []
+            
+            close_db(conn)
+            
+            return jsonify({
+                'success': True,
+                'session_id': requested_session_id,
+                'scanned': scanned_count,
+                'expected': 3,  # Test için sabit
+                'scanned_qrs': scanned_qrs
+            })
+        
+        # Normal production mode
         conn = get_db()
         cursor = conn.cursor()
 

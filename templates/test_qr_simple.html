@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 QR Test - Kamera Olmadan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .qr-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .qr-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .qr-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .qr-button:active {
+            transform: translateY(0);
+        }
+        
+        .qr-button.scanned {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .stats {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box strong {
+            color: #856404;
+        }
+        
+        .session-info {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .session-info code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Basit yeşil feedback overlay */
+        #simple-qr-feedback {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        @keyframes pulse {
+            0% { 
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 QR Okuma Testi</h1>
+        <p class="subtitle">Kamera olmadan - Basit Mod Test</p>
+        
+        <div class="info-box">
+            <strong>ℹ️ Test Modu:</strong> Bu sayfa gerçek kamera kullanmadan QR okuma deneyimini test eder. 
+            Butonlara tıklayarak QR kod okutmuş gibi davranır.
+        </div>
+        
+        <div class="session-info">
+            <strong>📋 Oturum ID:</strong> <code id="sessionId">Yükleniyor...</code><br>
+            <strong>🎯 Beklenen:</strong> <code id="expectedCount">3</code> QR
+        </div>
+        
+        <div class="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="scannedCount">0</div>
+                    <div class="stat-label">Okutulan</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="progressPercent">0%</div>
+                    <div class="stat-label">Tamamlama</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="qr-list">
+            <button class="qr-button" onclick="simulateQRScan('QR-TEST-001')">
+                📱 QR-TEST-001 Okut
+            </button>
+            <button class="qr-button" onclick="simulateQRScan('QR-TEST-002')">
+                📱 QR-TEST-002 Okut
+            </button>
+            <button class="qr-button" onclick="simulateQRScan('QR-TEST-003')">
+                📱 QR-TEST-003 Okut
+            </button>
+            <button class="qr-button" onclick="simulateQRScan('QR-TEST-001')">
+                🔄 QR-TEST-001 Tekrar Okut (Test için)
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        let sessionId = null;
+        let scannedQRs = new Set();
+        let isProcessing = false;
+        let lastScan = null;
+        let lastScanTime = 0;
+        
+        // Socket.IO bağlantısı
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
+        
+        // Sayfa yüklendiğinde session ID al
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Test sayfası yüklendi');
+            
+            // Session ID'yi URL'den veya yeni oluştur
+            const urlParams = new URLSearchParams(window.location.search);
+            sessionId = urlParams.get('session_id') || generateSessionId();
+            
+            document.getElementById('sessionId').textContent = sessionId;
+            console.log('📋 Session ID:', sessionId);
+            
+            // İstatistikleri yükle
+            await loadStats();
+            
+            // Socket event listeners
+            socket.on('connect', () => {
+                console.log('✅ WebSocket bağlandı');
+            });
+            
+            socket.on('scan_result', (data) => {
+                console.log('📨 Scan result alındı:', data);
+                handleScanResult(data);
+            });
+        });
+        
+        function generateSessionId() {
+            return 'test-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        async function loadStats() {
+            try {
+                const response = await fetch(`/get_session_stats?session_id=${sessionId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('📊 İstatistikler yüklendi:', data);
+                    
+                    // Sayaçları güncelle
+                    document.getElementById('scannedCount').textContent = data.scanned || 0;
+                    document.getElementById('expectedCount').textContent = data.expected || 3;
+                    
+                    const percent = data.expected > 0 ? Math.round((data.scanned / data.expected) * 100) : 0;
+                    document.getElementById('progressPercent').textContent = percent + '%';
+                    
+                    // Okutulan QR'ları işaretle
+                    scannedQRs = new Set(data.scanned_qrs || []);
+                    updateButtonStates();
+                }
+            } catch (error) {
+                console.warn('⚠️ İstatistik yükleme hatası (önemli değil):', error.message);
+                // Hata olsa bile devam et - sayaçlar kritik değil
+            }
+        }
+        
+        function updateButtonStates() {
+            const buttons = document.querySelectorAll('.qr-button');
+            buttons.forEach(btn => {
+                const qrCode = btn.textContent.match(/QR-TEST-\d+/)?.[0];
+                if (qrCode && scannedQRs.has(qrCode)) {
+                    btn.classList.add('scanned');
+                }
+            });
+        }
+        
+        async function simulateQRScan(qrCode) {
+            const now = Date.now();
+            
+            // 🔧 KALICI DUPLICATE KONTROLÜ - Bir sayımda bir QR sadece 1 kez okunabilir
+            if (scannedQRs.has(qrCode)) {
+                console.log('⚠️ Bu QR zaten okundu, tekrar okuma engellendi');
+                
+                // Kırmızı ekran göster
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100vw; height: 100vh;
+                    background: rgba(255, 0, 0, 0.95);
+                    z-index: 999999;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                `;
+                overlay.innerHTML = `
+                    <div style="
+                        font-size: 60px;
+                        color: white;
+                        font-weight: bold;
+                        text-align: center;
+                    ">
+                        ⚠️<br>
+                        ZATEN OKUNDU
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.remove(), 1500);
+                
+                return; // Sunucuya gönderme
+            }
+            
+            // 🔧 İşlem kilidi kontrolü
+            if (isProcessing) {
+                console.log('⚠️ QR işleniyor, lütfen bekle');
+                alert('⚠️ Bir QR zaten işleniyor, bekle!');
+                return;
+            }
+            
+            isProcessing = true;
+            lastScan = qrCode;
+            lastScanTime = now;
+            
+            // 🔧 Set'e ekle (kalıcı duplicate önleme)
+            scannedQRs.add(qrCode);
+            console.log('📝 QR Sete eklendi. Toplam:', scannedQRs.size);
+            
+            console.log('🎯 QR Simüle ediliyor:', qrCode);
+            
+            // 🔧 BASİT YEŞİL EKRAN GÖSTER
+            showSimpleGreenFeedback(qrCode);
+            
+            // Sunucuya gönder
+            try {
+                const response = await fetch('/api/scan_qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        qr_id: qrCode,
+                        session_id: sessionId,
+                        count_access: true
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('📥 Sunucu yanıtı:', data);
+                
+                // İstatistikleri güncelle
+                setTimeout(() => loadStats(), 500);
+                
+            } catch (error) {
+                console.error('❌ QR gönderme hatası:', error);
+            }
+            
+            // 2 saniye sonra işlemi bitir
+            setTimeout(() => {
+                isProcessing = false;
+                console.log('✅ Yeni QR okumaya hazır');
+            }, 2000);
+        }
+        
+        function showSimpleGreenFeedback(qrCode) {
+            // Eski overlay varsa kaldır
+            const oldOverlay = document.getElementById('simple-qr-feedback');
+            if (oldOverlay) oldOverlay.remove();
+            
+            // Yeni overlay oluştur
+            const overlay = document.createElement('div');
+            overlay.id = 'simple-qr-feedback';
+            overlay.innerHTML = `
+                <div style="
+                    font-size: 80px;
+                    color: #00ff00;
+                    font-weight: bold;
+                    text-align: center;
+                    animation: pulse 0.5s ease;
+                ">
+                    ✅<br>
+                    QR OKUNDU
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Ses çal
+            playSuccessSound();
+            
+            // 1.5 saniye sonra kaldır
+            setTimeout(() => {
+                if (overlay.parentNode) {
+                    overlay.remove();
+                }
+            }, 1500);
+        }
+        
+        function playSuccessSound() {
+            try {
+                const audioContext = window.sharedAudioContext || (window.sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)());
+                
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().catch(e => console.warn('AudioContext resume failed:', e));
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+                
+                console.log('🔊 Bip sesi çalındı');
+            } catch (error) {
+                console.warn('🔇 Ses çalınamadı:', error.message);
+            }
+        }
+        
+        function handleScanResult(data) {
+            if (data.success) {
+                console.log('✅ Başarılı tarama:', data.message);
+            } else {
+                console.log('⚠️ Duplicate veya hata:', data.message);
+            }
+        }
+    </script>
+</body>
+</html>

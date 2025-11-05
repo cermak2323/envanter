@@ -1757,3 +1757,73 @@ sqlite3.OperationalError: unrecognized token: ":"
 2025-11-05 11:22:04,421 - werkzeug - INFO -  * Debugger PIN: 527-412-432
 2025-11-05 11:29:56,044 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör (2)\\EnvanterQR\\EnvanterQR\\app.py', reloading
 2025-11-05 11:29:56,268 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 14:51:49,851 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 14:51:51,867 - werkzeug - WARNING -  * Debugger is active!
+2025-11-05 14:51:51,870 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-11-05 15:08:27,887 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:08:27,893 - root - ERROR - Error in get_recent_activities: no such column: qr_code
+2025-11-05 15:08:27,907 - root - ERROR - Error in get_count_status: no such column: total_expected
+2025-11-05 15:08:28,202 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:08:46,243 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:08:57,974 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:09:01,299 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:09:03,832 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:09:06,428 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:06,156 - werkzeug - INFO -  * Detected change in 'C:\\Users\\rsade\\Desktop\\Yeni klasör (2)\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-11-05 15:13:06,384 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 15:13:08,341 - werkzeug - WARNING -  * Debugger is active!
+2025-11-05 15:13:08,346 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-11-05 15:13:08,957 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:11,918 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:14,627 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:19,452 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:20,131 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:20,497 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:20,745 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:26,480 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:28,526 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:30,568 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:32,745 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:35,203 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:40,476 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:42,797 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:44,836 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:13:49,531 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:42,620 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:43,442 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:43,828 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:43,987 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:44,281 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:46,930 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:49,401 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:51,504 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:53,609 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:18:55,651 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:19:00,645 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:19:02,690 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:12,479 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 15:26:14,564 - werkzeug - WARNING -  * Debugger is active!
+2025-11-05 15:26:14,570 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-11-05 15:26:20,442 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:37,675 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:41,804 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:44,294 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:46,566 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:48,596 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:52,369 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:26:54,454 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:31:47,046 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 15:31:49,074 - werkzeug - WARNING -  * Debugger is active!
+2025-11-05 15:31:49,079 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-11-05 15:34:24,473 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:34:27,557 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:34:30,063 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:34:32,289 - root - ERROR - Error in get_session_stats: no such column: total_expected
+2025-11-05 15:37:04,417 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör (2)\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-11-05 15:37:04,749 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 15:37:07,039 - werkzeug - WARNING -  * Debugger is active!
+2025-11-05 15:37:07,044 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-11-05 15:37:35,481 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\Yeni klasör (2)\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-11-05 15:37:35,674 - werkzeug - INFO -  * Restarting with stat
+2025-11-05 15:37:37,835 - werkzeug - WARNING -  * Debugger is active!
+2025-11-05 15:37:37,841 - werkzeug - INFO -  * Debugger PIN: 527-412-432

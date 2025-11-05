@@ -2095,15 +2095,12 @@
                 // Tam ekran yeşil mesaj
                 showFullScreenMessage(data.message || '✅ QR başarıyla okundu!', true);
 
-                // Başarı sesi
+                // Başarı sesi (market kasası düt sesi)
                 if (window.playSuccessSound) {
                     window.playSuccessSound();
                 }
 
-                // Titreşim
-                if (navigator.vibrate) {
-                    navigator.vibrate([200, 100, 200]);
-                }
+                // Titreşim kaldırıldı - sadece ses kullanılıyor
             }
 
             // İstatistikleri güncelle
@@ -2169,9 +2166,16 @@
                 }
 
                 const data = await response.json();
-                console.log('   Data received:', data);
+                try {
+                    console.log('   Data received:', JSON.stringify(data));
+                } catch (e) {
+                    console.log('   Data received (non-serializable):', data);
+                }
 
-                if (data.success && data.activities) {
+                // Server returns plain array (not wrapped in {success, activities})
+                const activities = Array.isArray(data) ? data : (data.activities || []);
+                
+                if (activities.length > 0) {
                     const timeline = document.getElementById('activityTimeline');
                     const activityCount = document.getElementById('activityCount');
 
@@ -2183,10 +2187,10 @@
                     // Mevcut placeholder'ı temizle
                     timeline.innerHTML = '';
 
-                    console.log(`   Toplam aktivite: ${data.activities.length}`);
+                    console.log(`   Toplam aktivite: ${activities.length}`);
 
                     // Aktiviteleri ekle
-                    data.activities.forEach((activity, index) => {
+                    activities.forEach((activity, index) => {
                         const activityDiv = document.createElement('div');
                         activityDiv.className = 'activity-item';
 
@@ -2229,12 +2233,12 @@
 
                     // Aktivite sayısını güncelle
                     if (activityCount) {
-                        activityCount.textContent = data.activities.length;
+                        activityCount.textContent = activities.length;
                     }
 
-                    console.log(`✅ ${data.activities.length} aktivite yüklendi`);
+                    console.log(`✅ ${activities.length} aktivite yüklendi`);
                 } else {
-                    console.warn('⚠️ No activities or unsuccessful response:', data);
+                    console.log('⚠️ No activities found (array is empty or response invalid)');
                 }
             } catch (error) {
                 console.error('❌ Aktiviteler yüklenirken hata:', error);
@@ -3038,7 +3042,11 @@
             try {
                 const response = await fetch('/get_session_stats');
                 const data = await response.json();
-                console.log('📥 /get_session_stats raw response:', data);
+                try {
+                    console.log('📥 /get_session_stats raw response:', JSON.stringify(data));
+                } catch (e) {
+                    console.log('📥 /get_session_stats raw response (non-serializable):', data);
+                }
                 if (data.success) {
                     // API'den gelen data yapısını düzelt
                     sessionStats = {
@@ -3051,7 +3059,18 @@
                     // Eğer scanned_qrs listesi geliyorsa duplicate kontrol kümesini güncelle
                     if (data.scanned_qrs && Array.isArray(data.scanned_qrs)) {
                         scannedQRsInSession.clear();
-                        data.scanned_qrs.forEach(q => scannedQRsInSession.add(q));
+                        data.scanned_qrs.forEach(q => {
+                            // Accept strings or objects from different backends
+                            let id = null;
+                            if (typeof q === 'string') {
+                                id = q;
+                            } else if (q && typeof q === 'object') {
+                                id = q.qr_code || q.qr_id || q.part_code || JSON.stringify(q);
+                            } else {
+                                id = String(q);
+                            }
+                            try { scannedQRsInSession.add(String(id)); } catch (e) { /* ignore */ }
+                        });
                         console.log(`✅ ${scannedQRsInSession.size} scanned_qrs loaded into session set`);
                     }
                     updateStatsDisplay();
@@ -3875,10 +3894,7 @@
                 document.body.appendChild(overlay);
                 setTimeout(() => overlay.remove(), 1000);
 
-                // Vibrate
-                if (navigator.vibrate) {
-                    navigator.vibrate([100, 50, 100]);
-                }
+                // Titreşim kaldırıldı - sadece ses kullanılıyor
             }
 
             // Auto remove

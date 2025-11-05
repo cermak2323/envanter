@@ -2661,34 +2661,48 @@ def get_session_stats():
 @app.route('/get_recent_activities')
 @login_required
 def get_recent_activities():
-    """Son aktiviteler"""
+    """Son QR tarama aktiviteleri"""
     try:
         conn = get_db()
         cursor = conn.cursor()
         
+        # Get recent scanned QRs instead of sessions
         execute_query(cursor, '''
-            SELECT session_id, started_at, ended_at, is_active, total_expected, total_scanned
-            FROM count_sessions
-            ORDER BY started_at DESC
+            SELECT qr_code, scanned_by, scanned_at, part_code
+            FROM scanned_qr
+            ORDER BY scanned_at DESC
             LIMIT 10
         ''')
         
         activities = []
         for row in cursor.fetchall():
+            # Try to get part name from qr_codes or parts table
+            part_name = None
+            try:
+                # First try qr_codes table
+                part_cursor = conn.cursor()
+                execute_query(part_cursor, '''
+                    SELECT part_name FROM qr_codes WHERE qr_code = %s
+                ''', (row[0],))
+                part_row = part_cursor.fetchone()
+                if part_row and part_row[0]:
+                    part_name = part_row[0]
+            except Exception:
+                pass
+            
             activities.append({
-                'session_id': row[0],
-                'started_at': row[1],
-                'ended_at': row[2],
-                'is_active': bool(row[3]),
-                'total_expected': row[4],
-                'total_scanned': row[5]
+                'qr_code': row[0],
+                'scanned_by': row[1],
+                'scanned_at': row[2],
+                'part_code': row[3] if len(row) > 3 else None,
+                'part_name': part_name or 'Bilinmeyen Ürün'
             })
         
         close_db(conn)
         return jsonify(activities)
     except Exception as e:
         logging.error(f"Error in get_recent_activities: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify([])  # Return empty array instead of error object
 
 @app.route('/get_count_status')
 @login_required

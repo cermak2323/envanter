@@ -409,7 +409,12 @@ class UltraQRScanner {
             });
             
             this.videoElement.srcObject = stream;
-            this.videoElement.play();
+            // Guard video.play() to prevent SecurityError
+            try {
+                await this.videoElement.play();
+            } catch (e) {
+                console.warn('📹 Video autoplay blocked (expected on first scan):', e.message);
+            }
             
             const codeReader = new ZXing.BrowserQRCodeReader();
             
@@ -485,7 +490,10 @@ class UltraQRScanner {
                         console.log('✅ Video playing successfully');
                         resolve();
                     })
-                    .catch(reject);
+                    .catch((e) => {
+                        console.warn('📹 Video autoplay blocked:', e.message);
+                        resolve(); // Don't reject, just continue
+                    });
             };
             
             this.videoElement.onerror = (e) => {
@@ -496,7 +504,12 @@ class UltraQRScanner {
             // Timeout fallback
             setTimeout(() => {
                 console.warn('⚠️ Video load timeout, trying to play anyway');
-                this.videoElement.play().then(resolve).catch(reject);
+                this.videoElement.play()
+                    .then(resolve)
+                    .catch((e) => {
+                        console.warn('📹 Video autoplay blocked (timeout):', e.message);
+                        resolve(); // Don't reject, just continue
+                    });
             }, 3000);
         });
         
@@ -782,27 +795,8 @@ class UltraQRScanner {
     }
     
     safeVibrate(pattern) {
-        // 🛡️ Enhanced vibration with user interaction check
-        try {
-            // Check if navigator.vibrate is available
-            if (!navigator.vibrate) {
-                console.log('📳 Vibration API not supported');
-                return;
-            }
-            
-            // Check for user interaction (stored globally)
-            if (!window.userHasInteracted) {
-                console.log('⚠️ Vibration blocked: User interaction required');
-                return;
-            }
-            
-            // Safe vibration call
-            navigator.vibrate(pattern);
-            console.log('📳 Vibration triggered:', pattern);
-            
-        } catch (error) {
-            console.warn('📳 Vibration failed:', error.message);
-        }
+        // Titreşim kaldırıldı - sadece ses kullanılıyor
+        console.log('📳 Vibration disabled - using sound only');
     }
     
     showMessage(text, isSuccess = true) {

@@ -1331,8 +1331,8 @@ def mark_qr_used():
         if result[1]:  # is_used
             return jsonify({'error': 'QR kod zaten kullanılmış'}), 400
 
-        # QR kodu kullanıldı olarak işaretle
-        execute_query(cursor, 'UPDATE qr_codes SET is_used = true, used_at = CURRENT_TIMESTAMP WHERE qr_id = %s', (qr_id,))
+        # QR kodu kullanıldı olarak işaretle (DB-agnostic)
+        execute_query(cursor, 'UPDATE qr_codes SET is_used = %s, used_at = %s WHERE qr_id = %s', (True, datetime.now(), qr_id))
         conn.commit()
         close_db(conn)
 
@@ -1506,8 +1506,8 @@ def download_single_qr(qr_id):
         close_db(conn)
         return jsonify({'error': 'QR kod bulunamadı'}), 404
 
-    execute_query(cursor, 'UPDATE qr_codes SET is_downloaded = true, downloaded_at = %s WHERE qr_id = %s',
-                 (datetime.now(), qr_id))
+    execute_query(cursor, 'UPDATE qr_codes SET is_downloaded = %s, downloaded_at = %s WHERE qr_id = %s',
+                 (True, datetime.now(), qr_id))
     conn.commit()
     close_db(conn)
 
@@ -1632,14 +1632,15 @@ def handle_scan_radical(data):
             emit('scan_result', {'success': False, 'message': f'⚠️ {part_name} zaten sayıldı!', 'duplicate': True}, broadcast=True)
             return
 
-        # Insert scan record
-        execute_query(cursor, 
-            'INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by, scanned_at) VALUES (%s, %s, %s, %s, %s)',
-            (str(session_id), qr_id, part_code, user_id, datetime.now()))
 
-        # Mark QR as used
-        execute_query(cursor, 'UPDATE qr_codes SET is_used = true, used_at = %s WHERE qr_id = %s',
-                     (datetime.now(), qr_id))
+            # Insert scan record
+            execute_query(cursor, 
+                'INSERT INTO scanned_qr (session_id, qr_id, part_code, scanned_by, scanned_at) VALUES (%s, %s, %s, %s, %s)',
+                (str(session_id), qr_id, part_code, user_id, datetime.now()))
+
+            # Mark QR as used
+            execute_query(cursor, 'UPDATE qr_codes SET is_used = %s, used_at = %s WHERE qr_id = %s',
+                         (True, datetime.now(), qr_id))
 
         conn.commit()
         close_db(conn)
@@ -1772,12 +1773,12 @@ def process_qr_scan_ultra(qr_id, session_id):
             VALUES (%s, %s, %s, %s, %s)
         """, (qr_id, str(session_id), part_code, session.get('user_id', 1), datetime.now()))
 
-        # Mark QR as used with timestamp
+        # Mark QR as used with timestamp (DB-agnostic)
         execute_query(cursor, """
             UPDATE qr_codes 
-            SET is_used = true, used_at = %s 
+            SET is_used = %s, used_at = %s 
             WHERE qr_id = %s
-        """, (datetime.now(), qr_id))
+        """, (True, datetime.now(), qr_id))
 
         # Get enhanced session statistics
         execute_query(cursor, """
@@ -2021,7 +2022,7 @@ def finish_count():
             return jsonify({'success': False, 'error': 'Sayım erişimi için şifre gerekli'}), 403
 
         # Aktif sayım oturumunu kontrol et
-        execute_query(cursor, "SELECT session_id, is_active, created_by FROM count_sessions WHERE is_active = TRUE LIMIT 1")
+        execute_query(cursor, "SELECT session_id, is_active, created_by FROM count_sessions WHERE is_active = %s LIMIT 1", (True,))
         session_result = cursor.fetchone()
 
         if not session_result:
@@ -2039,8 +2040,8 @@ def finish_count():
             return jsonify({'success': False, 'error': 'Bu sayım oturumu zaten tamamlanmış'}), 400
 
         # Sayım oturumunu sonlandır (admin yetkisiyle)
-        execute_query(cursor, "UPDATE count_sessions SET is_active = FALSE, ended_at = %s WHERE session_id = %s",
-                     (datetime.now(), session_id))
+        execute_query(cursor, "UPDATE count_sessions SET is_active = %s, ended_at = %s WHERE session_id = %s",
+                     (False, datetime.now(), session_id))
 
         # Rapor verilerini topla
         execute_query(cursor, '''
@@ -2250,8 +2251,8 @@ def get_reports():
                 cr.total_scanned, 
                 cr.accuracy_rate,
                 CASE 
-                    WHEN cs.is_active::integer = 1 THEN 'active'
-                    WHEN cs.is_active::integer = 0 THEN 'completed'
+                    WHEN CAST(cs.is_active AS INTEGER) = 1 THEN 'active'
+                    WHEN CAST(cs.is_active AS INTEGER) = 0 THEN 'completed'
                     ELSE 'unknown'
                 END as status,
                 cs.started_at
@@ -2355,8 +2356,67 @@ def count_access_required(f):
 @login_required
 @admin_count_required
 def admin_start_count():
-    print("DEBUG: admin_start_count çağrıldı")  # Debug
-    return start_count_internal()
+    """Admin sayım başlatma endpoint'i"""
+    print("DEBUG: admin_start_count çağrıldı")
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Aktif sayım var mı kontrol et (Dual-mode uyumlu)
+        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions WHERE is_active = %s', (True,))
+        active_count = cursor.fetchone()[0]
+        
+        if active_count > 0:
+            close_db(conn)
+            return jsonify({
+                'success': False,
+                'error': 'Zaten aktif bir sayım oturumu var!'
+            }), 400
+        
+        # Yeni sayım oturumu oluştur
+        import uuid
+        session_id = str(uuid.uuid4())
+        current_user_id = session.get('user_id')
+        
+        # Toplam beklenen adet
+        execute_query(cursor, 'SELECT COUNT(*) FROM qr_codes')
+        total_expected = cursor.fetchone()[0]
+        
+        execute_query(cursor, '''
+            INSERT INTO count_sessions 
+            (session_id, is_active, started_at, created_by, created_at, total_expected, total_scanned) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (session_id, True, datetime.now(), current_user_id, datetime.now(), total_expected, 0))
+        
+        conn.commit()
+        close_db(conn)
+        
+        print(f"✅ Sayım oturumu başlatıldı: {session_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sayım oturumu başlatıldı',
+            'session_id': session_id,
+            'total_expected': total_expected
+        })
+        
+    except Exception as e:
+        print(f"❌ Sayım başlatma hatası: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        if conn:
+            try:
+                conn.rollback()
+                close_db(conn)
+            except:
+                pass
+        
+        return jsonify({
+            'success': False,
+            'error': f'Sayım başlatılamadı: {str(e)}'
+        }), 500
 
 # API Endpoints for Dashboard Statistics
 @app.route('/api/qr_codes')
@@ -2452,6 +2512,113 @@ def api_dashboard_stats():
     }
     print(f"DEBUG: Gönderilen stats: {stats}")  # DEBUG
     return jsonify(stats)
+
+# Eksik endpoint'ler
+@app.route('/get_session_stats')
+@login_required
+def get_session_stats():
+    """Sayım session istatistikleri"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Toplam session sayısı
+        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions')
+        total = cursor.fetchone()[0]
+        
+        # Aktif session sayısı
+        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions WHERE is_active = %s', (True,))
+        active = cursor.fetchone()[0]
+        
+        # Tamamlanmış session sayısı
+        execute_query(cursor, 'SELECT COUNT(*) FROM count_sessions WHERE is_active = %s', (False,))
+        completed = cursor.fetchone()[0]
+        
+        close_db(conn)
+        
+        return jsonify({
+            'total': total,
+            'active': active,
+            'completed': completed
+        })
+    except Exception as e:
+        logging.error(f"Error in get_session_stats: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_recent_activities')
+@login_required
+def get_recent_activities():
+    """Son aktiviteler"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        execute_query(cursor, '''
+            SELECT session_id, started_at, ended_at, is_active, total_expected, total_scanned
+            FROM count_sessions
+            ORDER BY started_at DESC
+            LIMIT 10
+        ''')
+        
+        activities = []
+        for row in cursor.fetchall():
+            activities.append({
+                'session_id': row[0],
+                'started_at': row[1],
+                'ended_at': row[2],
+                'is_active': bool(row[3]),
+                'total_expected': row[4],
+                'total_scanned': row[5]
+            })
+        
+        close_db(conn)
+        return jsonify(activities)
+    except Exception as e:
+        logging.error(f"Error in get_recent_activities: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_count_status')
+@login_required
+def get_count_status():
+    """Aktif sayım durumu"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        execute_query(cursor, '''
+            SELECT session_id, started_at, total_expected, total_scanned, is_active
+            FROM count_sessions
+            WHERE is_active = %s
+            ORDER BY started_at DESC
+            LIMIT 1
+        ''', (True,))
+        
+        row = cursor.fetchone()
+        close_db(conn)
+        
+        if row:
+            return jsonify({
+                'active': True,
+                'session_id': row[0],
+                'started_at': row[1],
+                'total_expected': row[2],
+                'total_scanned': row[3]
+            })
+        else:
+            return jsonify({'active': False})
+    except Exception as e:
+        logging.error(f"Error in get_count_status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin')
+@login_required
+def admin_panel():
+    """Admin panel"""
+    # Admin kontrolü
+    if session.get('username') != 'admin':
+        return jsonify({'error': 'Admin erişimi gerekli'}), 403
+    
+    return render_template('admin.html')
 
 # Health Check ve Monitoring Endpoints
 @app.route('/health')

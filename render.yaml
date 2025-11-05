@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: envanterqr-app
+    runtime: python3
+    plan: starter
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt --no-cache-dir --prefer-binary && pip install -q flask flask-socketio psycopg2-binary
+    startCommand: python render_startup_alt.py
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        scope: build
+        value: 3.11.6
+      - key: DATABASE_URL
+        scope: secret
+      - key: SESSION_SECRET
+        scope: secret
+      - key: B2_APPLICATION_KEY_ID
+        scope: secret
+      - key: B2_APPLICATION_KEY
+        scope: secret
+      - key: B2_BUCKET_NAME
+        value: envanter-qr-bucket
+      - key: ADMIN_COUNT_PASSWORD
+        scope: secret
+    autoDeploy: false
+
+# NOTE: All secret environment variables must be set in Render Dashboard
+# DO NOT commit actual credential values to this file

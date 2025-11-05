@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Kodlar - Cermak Envanter Yönetimi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --cermak-red: #dc3545;
+            --cermak-red-dark: #c82333;
+            --cermak-red-darker: #bd2130;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
+            box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .btn-cermak {
+            background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-cermak:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220,53,69,0.3);
+            color: white;
+        }
+        
+        .search-box {
+            border-radius: 25px;
+            border: 2px solid var(--cermak-red);
+            padding: 10px 20px;
+        }
+        
+        .search-box:focus {
+            box-shadow: 0 0 0 0.2rem rgba(220,53,69,0.25);
+            border-color: var(--cermak-red);
+        }
+        
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .qr-grid .col-12 {
+            grid-column: 1 / -1;
+        }
+        
+        .qr-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .qr-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: var(--cermak-red);
+        }
+        
+        .qr-item img {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .qr-item.used {
+            background: #f5f5f5;
+            opacity: 0.6;
+            filter: grayscale(70%);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+            border-color: #999;
+        }
+        
+        .qr-item.used img {
+            opacity: 0.5;
+        }
+        
+        .qr-item.downloaded {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .badge-downloaded {
+            background: #28a745;
+        }
+        
+        .badge-used {
+            background: #6c757d;
+        }
+        
+        .modal-qr {
+            text-align: center;
+        }
+        
+        .modal-qr img {
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .user-badge {
+            background: white;
+            color: var(--cermak-red);
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-weight: 600;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--cermak-red);
+        }
+        
+        .stats-label {
+            font-size: 1rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .upload-area {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 3px dashed #dee2e6;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--cermak-red);
+            background: #f8f9fa;
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--cermak-red);
+            background: #fff5f5;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 50px;
+            color: #6c757d;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Görünürlük stabilitesi için */
+        .stable-element {
+            transition: opacity 0.3s ease;
+            min-height: 50px;
+        }
+        
+        .hidden-stable {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .visible-stable {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .navbar-custom {
+                border-radius: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .d-flex.align-items-center {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            .user-badge {
+                font-size: 0.9rem;
+                padding: 6px 12px;
+            }
+            
+            .btn {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+            }
+            
+            .stats-card {
+                margin-bottom: 15px;
+                padding: 15px;
+            }
+            
+            .stats-number {
+                font-size: 1.5rem;
+            }
+            
+            .stats-label {
+                font-size: 0.9rem;
+            }
+            
+            .upload-area {
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+            
+            .upload-area h5 {
+                font-size: 1.2rem;
+            }
+            
+            .upload-area p {
+                font-size: 0.9rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .input-group {
+                flex-wrap: wrap;
+            }
+            
+            .search-box {
+                margin-bottom: 0.5rem;
+            }
+            
+            .btn-cermak, .btn-success, .btn-warning {
+                margin-bottom: 0.5rem;
+                width: 100%;
+            }
+            
+            .qr-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 10px;
+            }
+            
+            .qr-item {
+                padding: 10px;
+            }
+            
+            .qr-item img {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .modal-dialog {
+                margin: 1rem;
+            }
+            
+            .modal-qr img {
+                max-width: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .navbar-brand {
+                font-size: 1rem;
+            }
+            
+            .d-flex.align-items-center .btn {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+            
+            .user-badge {
+                font-size: 0.8rem;
+                padding: 4px 8px;
+            }
+            
+            .stats-card {
+                padding: 10px;
+            }
+            
+            .stats-number {
+                font-size: 1.3rem;
+            }
+            
+            .upload-area {
+                padding: 15px;
+            }
+            
+            .upload-area h5 {
+                font-size: 1.1rem;
+            }
+            
+            .qr-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 8px;
+            }
+            
+            .qr-item img {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .qr-item {
+                padding: 8px;
+            }
+            
+            .modal-qr img {
+                max-width: 200px;
+            }
+            
+            .btn-cermak {
+                font-size: 0.9rem;
+                padding: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-custom">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-qr-code"></i> QR Kod Yönetimi
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="user-badge me-3">
+                    <i class="bi bi-person-circle"></i> <span id="userName"></span>
+                </span>
+                <button class="btn btn-light me-2" onclick="goToMain()">
+                    <i class="bi bi-house"></i> Ana Sayfa
+                </button>
+                <button class="btn btn-light me-2" onclick="goToReports()">
+                    <i class="bi bi-file-earmark-text"></i> Raporlar
+                </button>
+                <button class="btn btn-light" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> Çıkış
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- İstatistik Kartları -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalQRs">0</div>
+                    <div class="stats-label">Toplam QR</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="usedQRs">0</div>
+                    <div class="stats-label">Kullanılan</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="downloadedQRs">0</div>
+                    <div class="stats-label">İndirilen</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="availableQRs">0</div>
+                    <div class="stats-label">Kullanılabilir</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Excel Yükleme Alanı (Sadece QR yoksa gösterilir) -->
+        <div class="upload-area" id="uploadArea" style="display: none;">
+            <i class="bi bi-file-earmark-excel text-success" style="font-size: 3rem; margin-bottom: 20px;"></i>
+            <h5>QR Kodları Oluşturmak İçin Excel Dosyası Yükleyin</h5>
+            <p class="text-muted">Excel dosyanız <strong>part_code</strong>, <strong>part_name</strong> ve <strong>quantity</strong> sütunlarını içermelidir</p>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Gelişmiş QR yönetimi için <a href="/admin" class="alert-link">Admin Panel</a>'i kullanabilirsiniz.
+            </div>
+            <input type="file" class="form-control mb-3" id="partsFile" accept=".xlsx,.xls" style="max-width: 400px; margin: 0 auto;">
+            <button class="btn btn-cermak" onclick="uploadParts()">
+                <i class="bi bi-upload"></i> Excel Yükle ve QR Oluştur
+            </button>
+        </div>
+
+        <!-- Arama ve Kontroller -->
+        <div class="card" id="qrControlsCard" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-search"></i> QR Kod Arama ve İşlemler</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input type="text" class="form-control search-box" id="searchBox" placeholder="Parça kodu veya adı ile ara... (örn: 03786)">
+                            <button class="btn btn-cermak" onclick="performSearch()" id="searchBtn">
+                                <i class="bi bi-search"></i> Ara
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="clearSearch()" id="clearBtn">
+                                <i class="bi bi-x-circle"></i> Temizle
+                            </button>
+                        </div>
+                        <small class="text-muted mt-1 d-block">Toplam <span id="qrCount">0</span> QR kod</small>
+                        <div id="paginationInfo" class="text-muted small"></div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <!-- QR Yönetimi butonları admin paneline taşındı -->
+                        <span class="text-muted small">
+                            <i class="bi bi-info-circle"></i> 
+                            QR yönetimi için <a href="/admin" class="text-decoration-none">Admin Panel</a>'i kullanın
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Kodları Listesi -->
+        <div class="card" id="qrListCard" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-qr-code-scan"></i> QR Kodları</h5>
+            </div>
+            <div class="card-body">
+                <div id="loadingSpinner" class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <p>QR kodları yükleniyor...</p>
+                </div>
+                
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <i class="bi bi-qr-code-scan"></i>
+                    <h5>QR Kod Bulunamadı</h5>
+                    <p>Arama kriterlerinize uygun QR kod bulunamadı.</p>
+                </div>
+                
+                <div id="qrGrid" class="qr-grid" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Detay Modal -->
+    <div class="modal fade" id="qrModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--cermak-red) 0%, var(--cermak-red-dark) 100%); color: white;">
+                    <h5 class="modal-title"><i class="bi bi-qr-code"></i> QR Kod Detayı</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body modal-qr">
+                    <div id="modalQRContent"></div>
+                    <div class="mt-3">
+                        <button class="btn btn-cermak me-2" id="downloadQRBtn">
+                            <i class="bi bi-download"></i> İndir
+                        </button>
+                        <button class="btn btn-success" id="markUsedBtn">
+                            <i class="bi bi-check-circle"></i> Kullanıldı
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allQRs = [];
+        let filteredQRs = [];
+        let qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
+
+        // Event listeners'ı kurulumda ayarlayalım
+        function setupEventListeners() {
+            // Enter tuşu ile arama
+            const searchBox = document.getElementById('searchBox');
+            if (searchBox) {
+                searchBox.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        performSearch();
+                    }
+                });
+            }
+
+            // Drag & Drop için event listeners
+            const uploadArea = document.getElementById('uploadArea');
+            if (uploadArea) {
+                uploadArea.addEventListener('dragover', handleDragOver);
+                uploadArea.addEventListener('dragleave', handleDragLeave);
+                uploadArea.addEventListener('drop', handleDrop);
+            }
+        }
+
+        async function checkAuth() {
+            const response = await fetch('/check_auth');
+            const data = await response.json();
+            if (data.authenticated) {
+                document.getElementById('userName').textContent = data.full_name;
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        async function checkExistingQRs() {
+            try {
+                const response = await fetch('/check_existing_qrs');
+                const data = await response.json();
+                
+                // DOM elementlerini güvenli şekilde al
+                const uploadArea = document.getElementById('uploadArea');
+                const qrControlsCard = document.getElementById('qrControlsCard');
+                const qrListCard = document.getElementById('qrListCard');
+                
+                if (data.hasQRs) {
+                    // QR kodları var, normal arayüzü göster
+                    if (uploadArea) uploadArea.style.display = 'none';
+                    if (qrControlsCard) {
+                        qrControlsCard.style.display = 'block';
+                        qrControlsCard.style.visibility = 'visible';
+                    }
+                    if (qrListCard) {
+                        qrListCard.style.display = 'block';
+                        qrListCard.style.visibility = 'visible';
+                    }
+                    
+                    // Küçük gecikme ile QR'ları yükle
+                    setTimeout(() => {
+                        loadQRCodes(); // Bu boş arama ile başlangıç mesajını gösterir
+                    }, 100);
+                } else {
+                    // QR kodları yok, upload alanını göster
+                    if (uploadArea) {
+                        uploadArea.style.display = 'block';
+                        uploadArea.style.visibility = 'visible';
+                    }
+                    if (qrControlsCard) qrControlsCard.style.display = 'none';
+                    if (qrListCard) qrListCard.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('QR kontrol hatası:', error);
+                // Hata durumunda da upload alanını göster
+                const uploadArea = document.getElementById('uploadArea');
+                if (uploadArea) {
+                    uploadArea.style.display = 'block';
+                    uploadArea.style.visibility = 'visible';
+                }
+            }
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    document.getElementById('partsFile').files = files;
+                } else {
+                    alert('Lütfen bir Excel dosyası (.xlsx veya .xls) sürükleyin');
+                }
+            }
+        }
+
+        async function uploadParts() {
+            const fileInput = document.getElementById('partsFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Lütfen bir Excel dosyası seçin');
+                return;
+            }
+
+            const uploadBtn = document.querySelector('button[onclick="uploadParts()"]');
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> QR Kodları Oluşturuluyor...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload_parts', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    // Başarılı upload sonrası arayüzü güncelle
+                    checkExistingQRs();
+                } else {
+                    alert('Hata: ' + data.error);
+                }
+            } catch (error) {
+                alert('Sistem hatası: ' + error.message);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = originalText;
+            }
+        }
+
+        function performSearch() {
+            const searchValue = document.getElementById('searchBox').value.trim();
+            if (searchValue.length === 0) {
+                clearSearch();
+                return;
+            }
+            
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Aranıyor...';
+            
+            loadQRCodes(searchValue).finally(() => {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="bi bi-search"></i> Ara';
+            });
+        }
+
+        function clearSearch() {
+            document.getElementById('searchBox').value = '';
+            loadQRCodes('');
+        }
+
+        let currentPage = 1;
+        const itemsPerPage = 100; // 50.000 QR için performans optimizasyonu
+
+        function loadQRCodes(search = '', page = 1) {
+            // Arama terimi yoksa QR'ları yükleme
+            if (!search || search.trim() === '') {
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('qrGrid').style.display = 'none';
+                document.getElementById('emptyState').innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-search" style="font-size: 3rem; color: #dee2e6;"></i>
+                        <h5 class="mt-3">QR Kodlarını Görmek İçin Arama Yapın</h5>
+                        <p>Parça kodu veya parça adı ile arama yaparak QR kodlarını görüntüleyebilirsiniz.</p>
+                    </div>
+                `;
+                return Promise.resolve();
+            }
+            
+            currentPage = page;
+            const url = `/get_qr_codes?search=${encodeURIComponent(search)}&page=${page}&limit=${itemsPerPage}`;
+            
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('qrGrid').style.display = 'none';
+            
+            return fetch(url)
+                .then(response => response.json())
+                .then(response => {
+                    // Yeni API response formatını destekle
+                    const data = response.qr_codes || response; 
+                    allQRs = data;
+                    filteredQRs = data;
+                    displayQRs(data);
+                    updateStatistics(data);
+                    
+                    // Pagination bilgilerini güncelle
+                    updatePaginationInfo(response);
+                })
+                .catch(error => {
+                    console.error('QR kodları yüklenirken hata:', error);
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    alert('QR kodları yüklenirken hata oluştu');
+                });
+        }
+
+        function displayQRs(qrCodes) {
+            const qrGrid = document.getElementById('qrGrid');
+            const qrCount = document.getElementById('qrCount');
+            
+            document.getElementById('loadingSpinner').style.display = 'none';
+            qrCount.textContent = qrCodes.length;
+            
+            if (qrCodes.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('qrGrid').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('qrGrid').style.display = 'grid';
+            
+            qrGrid.innerHTML = '';
+            
+            // Sonuçları gruplama - aynı parça koduna sahip QR'ları grupla
+            const groupedQRs = {};
+            qrCodes.forEach(qr => {
+                if (!groupedQRs[qr.part_code]) {
+                    groupedQRs[qr.part_code] = [];
+                }
+                groupedQRs[qr.part_code].push(qr);
+            });
+            
+            // Grup başlıkları ile göster
+            Object.keys(groupedQRs).forEach(partCode => {
+                const qrs = groupedQRs[partCode];
+                
+                // Grup başlığı ekle (eğer birden fazla grup varsa)
+                if (Object.keys(groupedQRs).length > 1) {
+                    const groupHeader = document.createElement('div');
+                    groupHeader.className = 'col-12 mb-2';
+                    groupHeader.innerHTML = `
+                        <h6 class="text-primary border-bottom pb-2">
+                            <i class="bi bi-collection"></i> ${partCode} - ${qrs[0].part_name} (${qrs.length} adet)
+                        </h6>
+                    `;
+                    qrGrid.appendChild(groupHeader);
+                }
+                
+                qrs.forEach(qr => {
+                    const qrDiv = document.createElement('div');
+                    let className = 'qr-item';
+                    if (qr.is_used) className += ' used';
+                    else if (qr.is_downloaded) className += ' downloaded';
+                    
+                    qrDiv.className = className;
+                    qrDiv.onclick = () => showQRModal(qr);
+                    qrDiv.innerHTML = `
+                        <img src="/generate_qr_image/${qr.qr_id}" alt="${qr.qr_id}">
+                        <div class="mt-2"><strong>${qr.part_name}</strong></div>
+                        <div class="text-muted">${qr.part_code}</div>
+                        <div class="text-muted small">${qr.qr_id}</div>
+                        ${qr.is_downloaded ? '<span class="badge badge-downloaded">İndirildi</span>' : ''}
+                        ${qr.is_used ? '<span class="badge badge-used">Kullanıldı</span>' : ''}
+                    `;
+                    qrGrid.appendChild(qrDiv);
+                });
+            });
+        }
+
+        function updateStatistics(qrCodes) {
+            const total = qrCodes.length;
+            const used = qrCodes.filter(qr => qr.is_used).length;
+            const downloaded = qrCodes.filter(qr => qr.is_downloaded && !qr.is_used).length;
+            const available = total - used;
+
+            document.getElementById('totalQRs').textContent = total;
+            document.getElementById('usedQRs').textContent = used;
+            document.getElementById('downloadedQRs').textContent = downloaded;
+            document.getElementById('availableQRs').textContent = available;
+        }
+
+        function showQRModal(qr) {
+            const content = document.getElementById('modalQRContent');
+            content.innerHTML = `
+                <img src="/generate_qr_image/${qr.qr_id}" alt="${qr.qr_id}">
+                <h4 class="mt-3">${qr.part_name}</h4>
+                <p class="text-muted">Parça Kodu: ${qr.part_code}</p>
+                <p class="text-muted">QR ID: ${qr.qr_id}</p>
+                ${qr.is_downloaded ? '<span class="badge badge-downloaded">İndirildi</span>' : ''}
+                ${qr.is_used ? '<span class="badge badge-used">Kullanıldı</span>' : ''}
+            `;
+            
+            document.getElementById('downloadQRBtn').onclick = () => downloadSingleQR(qr.qr_id);
+            
+            const markUsedBtn = document.getElementById('markUsedBtn');
+            if (qr.is_used) {
+                markUsedBtn.disabled = true;
+                markUsedBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Kullanıldı';
+                markUsedBtn.className = 'btn btn-success';
+            } else {
+                markUsedBtn.disabled = false;
+                markUsedBtn.innerHTML = '<i class="bi bi-check-circle"></i> Kullanıldı';
+                markUsedBtn.className = 'btn btn-success';
+                markUsedBtn.onclick = () => markQRAsUsed(qr.qr_id);
+            }
+            
+            qrModal.show();
+        }
+
+        function downloadSingleQR(qrId) {
+            window.location.href = '/download_single_qr/' + qrId;
+            setTimeout(() => {
+                qrModal.hide();
+                loadQRCodes(document.getElementById('searchBox').value);
+            }, 500);
+        }
+
+        function downloadAllQR() {
+            window.location.href = '/download_all_qr';
+        }
+
+        function updatePaginationInfo(response) {
+            if (response.total_count !== undefined) {
+                const qrCount = document.getElementById('qrCount');
+                qrCount.textContent = response.total_count;
+                
+                // Sayfalama bilgisini göster
+                const paginationInfo = document.getElementById('paginationInfo');
+                if (paginationInfo) {
+                    paginationInfo.innerHTML = `
+                        Sayfa ${response.current_page} / ${response.total_pages} 
+                        (Toplam ${response.total_count} QR)
+                    `;
+                }
+            }
+        }
+
+        function markQRAsUsed(qrId) {
+            if (!confirm('Bu QR kodu kullanıldı olarak işaretlemek istediğinizden emin misiniz?')) {
+                return;
+            }
+            
+            const markUsedBtn = document.getElementById('markUsedBtn');
+            markUsedBtn.disabled = true;
+            markUsedBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> İşleniyor...';
+            
+            fetch('/mark_qr_used', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ qr_id: qrId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    markUsedBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Kullanıldı';
+                    markUsedBtn.className = 'btn btn-success';
+                    
+                    // QR listesini yenile
+                    loadQRCodes(document.getElementById('searchBox').value);
+                    
+                    setTimeout(() => {
+                        qrModal.hide();
+                    }, 1000);
+                } else {
+                    alert('Hata: ' + data.error);
+                    markUsedBtn.disabled = false;
+                    markUsedBtn.innerHTML = '<i class="bi bi-check-circle"></i> Kullanıldı';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Bir hata oluştu');
+                markUsedBtn.disabled = false;
+                markUsedBtn.innerHTML = '<i class="bi bi-check-circle"></i> Kullanıldı';
+            });
+        }
+
+        function confirmClearAllQRs() {
+            if (confirm('TÜM QR kodlarını silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz ve tüm QR kodları kalıcı olarak silinecektir.')) {
+                clearAllQRs();
+            }
+        }
+
+        async function clearAllQRs() {
+            try {
+                const response = await fetch('/clear_all_qrs', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    checkExistingQRs(); // Arayüzü güncelle
+                } else {
+                    alert('Hata: ' + data.error);
+                }
+            } catch (error) {
+                alert('Sistem hatası: ' + error.message);
+            }
+        }
+
+        function showUploadNewArea() {
+            alert('QR yönetimi için Admin Panel\'i kullanın: /admin');
+        }
+
+        function goToMain() {
+            window.location.href = '/';
+        }
+
+        function goToReports() {
+            window.location.href = '/reports';
+        }
+
+        async function logout() {
+            await fetch('/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+        
+        // Sayfa yükleme güvenliği
+        function initializePage() {
+            // DOM tamamen yüklenene kadar bekle
+            if (document.readyState === 'loading') {
+                setTimeout(initializePage, 50);
+                return;
+            }
+            
+            try {
+                setupEventListeners(); // Event listeners'ları kur
+                checkAuth();
+                checkExistingQRs();
+            } catch (error) {
+                console.error('Sayfa başlatma hatası:', error);
+                // Hata durumunda yeniden dene
+                setTimeout(initializePage, 1000);
+            }
+        }
+        
+        // Sayfa tamamen yüklendiğinde başlat
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            // Sayfa zaten yüklenmiş
+            initializePage();
+        }
+    </script>
+</body>
+</html>

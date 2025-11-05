@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cermak - Admin Sayım Kontrolü</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cermak-primary: #dc3545;
+            --cermak-primary-dark: #c82333;
+            --gradient-primary: linear-gradient(135deg, #dc3545 0%, #c82333 50%, #bd2130 100%);
+            --gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            --shadow-soft: 0 2px 20px rgba(0,0,0,0.08);
+            --shadow-medium: 0 4px 30px rgba(0,0,0,0.12);
+            --shadow-strong: 0 8px 40px rgba(0,0,0,0.16);
+            --border-radius: 20px;
+            --border-radius-lg: 25px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gradient-bg);
+            min-height: 100vh;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .main-container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .security-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-strong);
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .security-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .security-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: rgba(255,255,255,0.2);
+            padding: 1rem;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .security-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .security-subtitle {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .security-body {
+            padding: 2.5rem;
+        }
+
+        .password-form {
+            margin-bottom: 2rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+        }
+
+        .password-input {
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 1rem 1.25rem;
+            font-size: 1rem;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        .password-input:focus {
+            border-color: var(--cermak-primary);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+            outline: none;
+        }
+
+        .btn-verify {
+            background: var(--gradient-primary);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: var(--transition);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .btn-verify:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            color: white;
+        }
+
+        .btn-verify:disabled {
+            opacity: 0.6;
+            transform: none;
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 2px solid #6b7280;
+            color: #6b7280;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-back:hover {
+            background: #6b7280;
+            color: white;
+            text-decoration: none;
+        }
+
+        .count-section {
+            display: none;
+        }
+
+        .count-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .count-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .count-icon {
+            font-size: 2.5rem;
+            color: var(--cermak-primary);
+            background: rgba(220, 53, 69, 0.1);
+            padding: 1rem;
+            border-radius: 15px;
+        }
+
+        .count-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: var(--border-radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: var(--transition);
+            background: #f8f9fa;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--cermak-primary);
+            background: #ffffff;
+        }
+
+        .file-upload-icon {
+            font-size: 3rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .file-input {
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .file-label {
+            display: inline-block;
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .file-label:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-start-count {
+            background: var(--gradient-primary);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: var(--transition);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            opacity: 0.5;
+        }
+
+        .btn-start-count:enabled {
+            opacity: 1;
+        }
+
+        .btn-start-count:enabled:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            color: white;
+        }
+
+        .btn-emergency-stop {
+            background: linear-gradient(135deg, #ff4757 0%, #ff3838 50%, #ff2e2e 100%);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: var(--transition);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 2px solid #ff4757;
+        }
+
+        .btn-emergency-stop:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
+            color: white;
+            background: linear-gradient(135deg, #ff3838 0%, #ff2e2e 50%, #e55555 100%);
+            border-color: #ff3838;
+        }
+
+        .btn-emergency-stop:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+        }
+
+        .alert-custom {
+            border-radius: 15px;
+            border: none;
+            padding: 1rem 1.5rem;
+        }
+
+        .warning-note {
+            background: #fef3cd;
+            border: 2px solid #f6e05e;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .warning-note .warning-icon {
+            color: #d69e2e;
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+        }
+
+        .warning-note .warning-text {
+            color: #975a16;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .security-body {
+                padding: 2rem;
+            }
+            
+            .count-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="security-card">
+            <div class="security-header">
+                <i class="bi bi-shield-lock-fill security-icon"></i>
+                <h1 class="security-title">Güvenli Erişim</h1>
+                <p class="security-subtitle">Sayım başlatma yetkisi için şifre gerekli</p>
+            </div>
+            
+            <div class="security-body">
+                <!-- Şifre Doğrulama Bölümü -->
+                <div id="passwordSection">
+                    <div class="warning-note">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill warning-icon"></i>
+                            <div class="warning-text">
+                                Bu alan sadece yetkili personel tarafından erişilebilir. 
+                                Sayım başlatma yetkisi için özel şifre gereklidir.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form id="passwordForm" class="password-form">
+                        <label class="form-label">
+                            <i class="bi bi-key-fill me-2"></i>
+                            Yetkilendirme Şifresi
+                        </label>
+                        <input type="password" 
+                               class="password-input" 
+                               id="securityPassword" 
+                               placeholder="Şifreyi girin..."
+                               autocomplete="new-password">
+                        <div class="mt-3">
+                            <button type="submit" class="btn-verify" id="verifyBtn">
+                                <i class="bi bi-unlock-fill"></i>
+                                Şifreyi Doğrula
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <a href="/" class="btn-back">
+                            <i class="bi bi-arrow-left"></i>
+                            Ana Sayfaya Dön
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Sayım Başlatma Bölümü -->
+                <div id="countSection" class="count-section">
+                    <div class="count-card">
+                        <div class="count-header">
+                            <i class="bi bi-play-circle-fill count-icon"></i>
+                            <div>
+                                <h2 class="count-title">Yeni Sayım Başlat</h2>
+                                <p class="text-muted">Excel dosyanızı yükleyerek sayım işlemini başlatın</p>
+                            </div>
+                        </div>
+                        
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <i class="bi bi-cloud-upload file-upload-icon"></i>
+                            <div>
+                                <div class="file-label">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                    Excel Dosyası Seç
+                                </div>
+                                <input type="file" class="file-input" id="inventoryFile" accept=".xlsx,.xls">
+                            </div>
+                            <p style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
+                                .xlsx veya .xls formatında dosya yükleyin<br>
+                                Gerekli sütunlar: <strong>part_code</strong>, <strong>quantity</strong>
+                            </p>
+                        </div>
+                        
+                        <button type="button" class="btn btn-warning me-2" onclick="testPasswordModal()" style="margin-bottom: 10px;">
+                            <i class="bi bi-bug"></i> Test Şifre Modal
+                        </button>
+                        <br>
+                        
+                        <button class="btn-start-count" onclick="startCount()" id="startCountBtn" disabled>
+                            <i class="bi bi-play-fill"></i>
+                            Sayımı Başlat
+                        </button>
+                        
+                        <button class="btn-emergency-stop" onclick="emergencyStopCounts()" id="emergencyStopBtn">
+                            <i class="bi bi-stop-fill"></i>
+                            🚨 Acil Tüm Sayımları Durdur
+                        </button>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <a href="/" class="btn-back">
+                            <i class="bi bi-arrow-left"></i>
+                            Ana Sayfaya Dön
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let selectedFile = null; // Global dosya değişkeni
+
+        // Form submit event
+        document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('securityPassword').value;
+            const verifyBtn = document.getElementById('verifyBtn');
+            
+            if (!password) {
+                showAlert('Lütfen şifre girin', 'warning');
+                return;
+            }
+            
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="bi bi-hourglass-split spinner-border spinner-border-sm me-2"></i> Doğrulanıyor...';
+            
+            try {
+                const response = await fetch('/admin_count/verify_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Şifre doğru! Sayım paneline yönlendiriliyorsunuz...', 'success');
+                    setTimeout(() => {
+                        document.getElementById('passwordSection').style.display = 'none';
+                        document.getElementById('countSection').style.display = 'block';
+                        setupFileUpload();
+                    }, 1500);
+                } else {
+                    showAlert(data.message, 'danger');
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerHTML = '<i class="bi bi-unlock-fill"></i> Şifreyi Doğrula';
+                    document.getElementById('securityPassword').value = '';
+                    document.getElementById('securityPassword').focus();
+                }
+            } catch (error) {
+                showAlert('Sistem hatası: ' + error.message, 'danger');
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="bi bi-unlock-fill"></i> Şifreyi Doğrula';
+            }
+        });
+
+        // Dosya upload setup - Basitleştirilmiş
+        function setupFileUpload() {
+            const fileInput = document.getElementById('inventoryFile');
+            
+            if (fileInput) {
+                // Sadece change event dinle
+                fileInput.addEventListener('change', handleFileSelect);
+                
+                // Input'u temizle (önceki state'i sıfırla)
+                fileInput.value = '';
+            }
+            
+            // Tüm click handler'ları sil ve tekrar kur
+            const fileArea = document.querySelector('.file-upload-area');
+            const fileLabel = document.querySelector('.file-label');
+            
+            if (fileArea) {
+                // Önceki event'leri kaldır
+                fileArea.replaceWith(fileArea.cloneNode(true));
+                
+                // Yeni area referansını al
+                const newFileArea = document.querySelector('.file-upload-area');
+                newFileArea.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    console.log('File area clicked, triggering file input'); // Debug
+                    if (fileInput) {
+                        console.log('File input found, clicking it'); // Debug
+                        fileInput.click();
+                    } else {
+                        console.log('File input NOT found!'); // Debug
+                    }
+                });
+            }
+        }
+
+        function handleFileSelect(e) {
+            console.log('File select event triggered:', e); // Debug
+            const file = e.target.files[0];
+            const uploadArea = document.querySelector('.file-upload-area');
+            const startBtn = document.getElementById('startCountBtn');
+            
+            console.log('Selected file:', file); // Debug
+            
+            if (file) {
+                selectedFile = file; // Global değişkene kaydet
+                console.log('File saved to selectedFile:', selectedFile.name); // Debug
+                uploadArea.innerHTML = `
+                    <i class="bi bi-file-earmark-excel-fill" style="font-size: 3rem; color: var(--cermak-primary); margin-bottom: 1rem;"></i>
+                    <div style="color: var(--cermak-primary); font-weight: 600; margin-bottom: 0.5rem;">${file.name}</div>
+                    <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem;">
+                        Dosya boyutu: ${(file.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSelectedFile()">
+                        <i class="bi bi-x-circle"></i> Temizle
+                    </button>
+                `;
+                
+                // Upload area'nın artık file input'u yok, bu yüzden yeni bir state'e geçti
+                uploadArea.style.cursor = 'default';
+                startBtn.disabled = false;
+                console.log('UI updated: File selected, area changed to show file info'); // Debug
+            } else {
+                selectedFile = null;
+                startBtn.disabled = true;
+            }
+        }
+
+        function clearSelectedFile() {
+            const uploadArea = document.querySelector('.file-upload-area');
+            const startBtn = document.getElementById('startCountBtn');
+            
+            selectedFile = null; // Global değişkeni temizle
+            
+            uploadArea.innerHTML = `
+                <i class="bi bi-cloud-upload file-upload-icon"></i>
+                <div>
+                    <div class="file-label">
+                        <i class="bi bi-file-earmark-excel"></i>
+                        Excel Dosyası Seç
+                    </div>
+                    <input type="file" class="file-input" id="inventoryFile" accept=".xlsx,.xls">
+                </div>
+                <p style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
+                    .xlsx veya .xls formatında dosya yükleyin<br>
+                    Gerekli sütunlar: <strong>part_code</strong>, <strong>quantity</strong>
+                </p>
+            `;
+            
+            // Upload area'yı tıklanabilir hale getir
+            uploadArea.style.cursor = 'pointer';
+            startBtn.disabled = true;
+            
+            // Event handler'ları yeniden kur
+            setupFileUpload();
+        }
+
+        async function startCount() {
+            if (!selectedFile) {
+                showAlert('Lütfen bir envanter dosyası seçin', 'warning');
+                return;
+            }
+
+            // show start confirmation modal
+            const startModalEl = document.getElementById('adminStartCountModal');
+            const startModal = new bootstrap.Modal(startModalEl);
+            startModalEl._startSelectedFile = selectedFile;
+            startModal.show();
+        }
+
+        function showPasswordModal(password) {
+            console.log('showPasswordModal çağrıldı, password:', password); // Debug
+            
+            // Modal HTML'i oluştur
+            const modalHTML = `
+                <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="border-radius: 25px; box-shadow: 0 25px 80px rgba(0,0,0,0.25); border: none; overflow: hidden;">
+                            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 2rem; text-align: center;">
+                                <div style="width: 100%; text-align: center;">
+                                    <div style="width: 80px; height: 80px; margin: 0 auto 1rem; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <h3 style="margin: 0; font-weight: 700; font-size: 1.8rem;">Sayım Başlatıldı!</h3>
+                                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1rem;">Güvenlik Parolası Oluşturuldu</p>
+                                </div>
+                            </div>
+                            <div class="modal-body" style="padding: 2.5rem; text-align: center; background: #f8f9fa;">
+                                <div style="margin-bottom: 2rem;">
+                                    <p style="color: #6c757d; margin-bottom: 1.5rem; font-size: 1rem; line-height: 1.6;">
+                                        Bu parolayı tüm sayım ekibi ile paylaşın.<br>
+                                        Sayım ekranına giriş için gereklidir.
+                                    </p>
+                                </div>
+                                
+                                <div style="background: white; border: 3px dashed #28a745; border-radius: 20px; padding: 2rem; margin-bottom: 2rem; position: relative;">
+                                    <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #28a745; color: white; padding: 0.5rem 1.5rem; border-radius: 25px; font-size: 0.9rem; font-weight: 600;">
+                                        SAYIM PAROLASİ
+                                    </div>
+                                    <div style="font-size: 2.5rem; font-weight: 900; letter-spacing: 8px; color: #28a745; font-family: 'Courier New', monospace; margin-top: 1rem;" id="generatedPassword">${password}</div>
+                                    <div style="font-size: 0.9rem; color: #6c757d; margin-top: 1rem; font-weight: 500;">
+                                        Bu parolayı güvenli bir yerde saklayın
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                                    <button class="btn" onclick="copyPassword('${password}')" style="background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%); color: white; border: none; padding: 1rem 2rem; border-radius: 15px; font-weight: 600; font-size: 1rem; min-width: 150px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);">
+                                        <i class="bi bi-clipboard me-2"></i>Kopyala
+                                    </button>
+                                    <button class="btn" onclick="goToCountPage()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 1rem 2rem; border-radius: 15px; font-weight: 600; font-size: 1rem; min-width: 150px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
+                                        <i class="bi bi-arrow-right me-2"></i>Sayım Başlat
+                                    </button>
+                                </div>
+                                
+                                <div style="margin-top: 2rem; padding: 1.5rem; background: #e8f5e8; border-radius: 15px; border-left: 4px solid #28a745;">
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: #155724; font-weight: 600; margin-bottom: 0.5rem;">
+                                        <i class="bi bi-info-circle"></i>
+                                        <span>Önemli Bilgi</span>
+                                    </div>
+                                    <p style="margin: 0; color: #155724; font-size: 0.9rem; line-height: 1.5;">
+                                        Bu parola sadece mevcut sayım oturumu için geçerlidir. Sayım bittiğinde geçerliliğini yitirir.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Mevcut modalı kaldır
+            const existingModal = document.getElementById('passwordModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Yeni modalı ekle
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            console.log('Modal HTML eklendi'); // Debug
+            
+            // Hover efektleri için CSS ekle
+            const style = document.createElement('style');
+            style.textContent = `
+                #passwordModal .btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+                }
+                #passwordModal .btn:active {
+                    transform: translateY(0);
+                }
+                @media (max-width: 576px) {
+                    #passwordModal .modal-body {
+                        padding: 1.5rem !important;
+                    }
+                    #passwordModal .btn {
+                        min-width: 120px !important;
+                        font-size: 0.9rem !important;
+                        padding: 0.8rem 1.5rem !important;
+                    }
+                    #passwordModal #generatedPassword {
+                        font-size: 1.8rem !important;
+                        letter-spacing: 4px !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Modalı göster
+            const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+            console.log('Modal objesi oluşturuldu:', modal); // Debug
+            modal.show();
+            console.log('Modal.show() çağrıldı'); // Debug;
+        }
+
+        function copyPassword(password) {
+            navigator.clipboard.writeText(password).then(() => {
+                // Success feedback
+                const copyBtn = event.target.closest('button');
+                const originalContent = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Kopyalandı!';
+                copyBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalContent;
+                    copyBtn.style.background = 'linear-gradient(135deg, #17a2b8 0%, #20c997 100%)';
+                }, 2000);
+                
+                showAlert('Parola panoya kopyalandı!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = password;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showAlert('Parola panoya kopyalandı!', 'success');
+            });
+        }
+
+        function goToCountPage() {
+            // Önce modal'ı kapat
+            const modalEl = document.getElementById('passwordModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            
+            // Modal kapatıldıktan sonra navigate et
+            setTimeout(() => {
+                window.location.href = '/count';
+            }, 500);
+        }
+
+        function testPasswordModal() {
+            console.log('Test modal çağrıldı');
+            showPasswordModal('TEST123!');
+        }
+
+        function showAlert(message, type) {
+            // Mevcut alert'leri temizle
+            const existingAlerts = document.querySelectorAll('.alert-custom');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-custom position-fixed`;
+            alert.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            `;
+            
+            const icon = type === 'danger' ? 'x-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle';
+            alert.innerHTML = `
+                <i class="bi bi-${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentElement) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Socket events - DEAKTIF (passwordModal gösterilmesi için)
+        // socket.on('count_started', function(data) {
+        //     console.log('Sayım başlatıldı:', data);
+        //     window.location.href = '/count';
+        // });
+
+        // Sayfa yüklendiğinde auth kontrolü
+        async function checkAuth() {
+            try {
+                const response = await fetch('/check_auth');
+                const data = await response.json();
+                if (!data.authenticated) {
+                    window.location.href = '/';
+                } else if (data.role !== 'admin') {
+                    showAlert('Bu sayfaya erişim yetkiniz yok', 'danger');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Auth kontrol hatası:', error);
+                window.location.href = '/';
+            }
+        }
+
+        checkAuth();
+    </script>
+
+        <!-- Admin Start Count Modal -->
+        <div class="modal fade" id="adminStartCountModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title">Sayım Başlatılıyor</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p>Sayım başlatılacak ve sayım sayfasına yönlendirileceksiniz. Devam etmek istiyor musunuz?</p>
+                    </div>
+                    <div class="modal-footer justify-content-center border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="button" id="confirmAdminStartBtn" class="btn btn-primary">Tamam</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const confirmBtn = document.getElementById('confirmAdminStartBtn');
+                confirmBtn && confirmBtn.addEventListener('click', async function() {
+                    const modalEl = document.getElementById('adminStartCountModal');
+                    const file = modalEl._startSelectedFile;
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const startBtn = document.getElementById('startCountBtn');
+                    const originalContent = startBtn ? startBtn.innerHTML : '';
+                    if (startBtn) { startBtn.disabled = true; startBtn.innerHTML = '<i class="bi bi-hourglass-split spinner-border spinner-border-sm me-2"></i> Başlatılıyor...'; }
+
+                    try {
+                        const response = await fetch('/admin_count/start_count', { method: 'POST', body: formData });
+                        const data = await response.json();
+                        console.log('Sayım başlatma yanıtı:', data); // Debug log
+                        console.log('Response status:', response.status); // Debug
+                        if (data.success) {
+                            console.log('Parola:', data.count_password); // Debug log
+                            console.log('showPasswordModal çağrılıyor'); // Debug
+                            showPasswordModal(data.count_password);
+                            console.log('showPasswordModal çağrıldıktan sonra'); // Debug
+                        } else {
+                            showAlert('Hata: ' + data.error, 'danger');
+                            if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = originalContent; }
+                        }
+                    } catch (error) {
+                        console.error('Fetch hatası:', error); // Debug log
+                        showAlert('Sistem hatası: ' + error.message, 'danger');
+                        if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = originalContent; }
+                    }
+                });
+            });
+
+            // Acil sayım durdurma fonksiyonu
+            window.emergencyStopCounts = async function() {
+                const confirmed = confirm('⚠️ UYARI!\n\nTüm aktif sayımları durdurmak istediğinizden emin misiniz?\n\nBu işlem geri alınamaz ve devam eden tüm sayımları durdurur.');
+                
+                if (!confirmed) return;
+
+                const adminPassword = prompt('🔐 Admin şifresini girin:');
+                if (!adminPassword) return;
+
+                const emergencyBtn = document.getElementById('emergencyStopBtn');
+                const originalContent = emergencyBtn.innerHTML;
+                
+                try {
+                    emergencyBtn.disabled = true;
+                    emergencyBtn.innerHTML = '<i class="bi bi-hourglass-split spinner-border spinner-border-sm me-2"></i> Durduruluyor...';
+
+                    const response = await fetch('/stop_all_counts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ admin_password: adminPassword })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('✅ Başarılı!\n\n' + data.message);
+                        // Sayfayı yenile
+                        window.location.reload();
+                    } else {
+                        alert('❌ Hata!\n\n' + data.error);
+                    }
+                } catch (error) {
+                    alert('❌ Sistem Hatası!\n\n' + error.message);
+                } finally {
+                    emergencyBtn.disabled = false;
+                    emergencyBtn.innerHTML = originalContent;
+                }
+            };
+        </script>
+</body>
+</html>

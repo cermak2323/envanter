@@ -1,0 +1,45 @@
+2025-10-25 13:00:57,533 - werkzeug - WARNING -  * Debugger is active!
+2025-10-25 13:00:57,536 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-25 13:01:05,701 - werkzeug - INFO -  * Restarting with stat
+2025-10-25 13:01:07,791 - werkzeug - WARNING -  * Debugger is active!
+2025-10-25 13:01:07,796 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:38:39,518 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:38:42,503 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:38:42,512 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:39:56,031 - root - INFO - Creating new B2 bucket: envanter-qr-bucket
+2025-10-27 14:39:56,360 - root - ERROR - B2 authorization failed: unauthorized for application key with capabilities 'readBucketEncryption,writeBuckets,readFiles,readBuckets,listFiles,writeBucketReplications,readBucketNotifications,writeBucketLogging,readBucketReplications,listBuckets,writeBucketNotifications,shareFiles,writeBucketEncryption,writeFiles,readBucketLogging,deleteFiles', restricted to bucket 'Envanter' (unauthorized)
+2025-10-27 14:39:56,363 - root - ERROR - Error deleting QR codes from B2: unauthorized for application key with capabilities 'readBucketEncryption,writeBuckets,readFiles,readBuckets,listFiles,writeBucketReplications,readBucketNotifications,writeBucketLogging,readBucketReplications,listBuckets,writeBucketNotifications,shareFiles,writeBucketEncryption,writeFiles,readBucketLogging,deleteFiles', restricted to bucket 'Envanter' (unauthorized)
+2025-10-27 14:40:15,666 - root - INFO - Creating new B2 bucket: envanter-qr-bucket
+2025-10-27 14:40:15,839 - root - ERROR - B2 authorization failed: unauthorized for application key with capabilities 'readBucketNotifications,writeBucketEncryption,readBucketLogging,readBuckets,readFiles,listBuckets,shareFiles,writeBucketLogging,deleteFiles,writeBuckets,listFiles,readBucketReplications,writeBucketReplications,writeFiles,readBucketEncryption,writeBucketNotifications', restricted to bucket 'Envanter' (unauthorized)
+2025-10-27 14:40:15,839 - root - ERROR - Error generating QR image for 17013-11030-bf03fa00: unauthorized for application key with capabilities 'readBucketNotifications,writeBucketEncryption,readBucketLogging,readBuckets,readFiles,listBuckets,shareFiles,writeBucketLogging,deleteFiles,writeBuckets,listFiles,readBucketReplications,writeBucketReplications,writeFiles,readBucketEncryption,writeBucketNotifications', restricted to bucket 'Envanter' (unauthorized)
+2025-10-27 14:40:17,013 - root - INFO - Creating new B2 bucket: envanter-qr-bucket
+2025-10-27 14:40:17,162 - root - ERROR - B2 authorization failed: unauthorized for application key with capabilities 'readBuckets,readFiles,writeBucketLogging,shareFiles,writeFiles,readBucketNotifications,writeBucketNotifications,listFiles,writeBucketEncryption,listBuckets,writeBucketReplications,writeBuckets,deleteFiles,readBucketLogging,readBucketReplications,readBucketEncryption', restricted to bucket 'Envanter' (unauthorized)
+2025-10-27 14:40:17,163 - root - ERROR - Error generating QR image for 17013-11030-3a28c6fd: unauthorized for application key with capabilities 'readBuckets,readFiles,writeBucketLogging,shareFiles,writeFiles,readBucketNotifications,writeBucketNotifications,listFiles,writeBucketEncryption,listBuckets,writeBucketReplications,writeBuckets,deleteFiles,readBucketLogging,readBucketReplications,readBucketEncryption', restricted to bucket 'Envanter' (unauthorized)
+2025-10-27 14:42:35,100 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-27 14:42:35,484 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:42:38,406 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:42:38,422 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:42:49,526 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\b2_storage.py', reloading
+2025-10-27 14:42:49,750 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:42:52,267 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:42:52,272 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:43:00,354 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-27 14:43:00,649 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:43:03,169 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:43:03,173 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:43:07,225 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-27 14:43:07,533 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:43:09,869 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:43:09,874 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:43:18,973 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-27 14:43:19,166 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:43:21,485 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:43:21,489 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:43:24,530 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-27 14:43:24,859 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:43:27,291 - werkzeug - WARNING -  * Debugger is active!
+2025-10-27 14:43:27,296 - werkzeug - INFO -  * Debugger PIN: 527-412-432
+2025-10-27 14:43:34,371 - werkzeug - INFO -  * Detected change in 'c:\\Users\\rsade\\Desktop\\EnvanterQR\\EnvanterQR\\app.py', reloading
+2025-10-27 14:43:34,690 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:45:21,837 - werkzeug - INFO -  * Restarting with stat
+2025-10-27 14:45:29,767 - werkzeug - INFO -  * Restarting with stat

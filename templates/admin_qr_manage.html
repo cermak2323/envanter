@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Yönetimi - EnvanterQR Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="text"],
+        input[type="file"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .secondary-btn {
+            background: #f0f0f0;
+            color: #333;
+            margin-top: 10px;
+        }
+        
+        .secondary-btn:hover {
+            background: #e0e0e0;
+            box-shadow: none;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        
+        .qr-preview {
+            margin: 20px 0;
+            text-align: center;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .qr-preview img {
+            max-width: 200px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .qr-preview p {
+            margin-top: 10px;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .file-input-label {
+            display: block;
+            padding: 10px;
+            background: #f0f0f0;
+            border: 2px dashed #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-input-label:hover {
+            background: #e8e8e8;
+            border-color: #667eea;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .qr-list {
+            margin-top: 20px;
+        }
+        
+        .qr-item {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .qr-item .qr-id {
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+            flex: 1;
+        }
+        
+        .qr-item .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .qr-item .status.used {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .qr-item .status.unused {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .pagination button {
+            width: auto;
+            padding: 8px 12px;
+            margin: 0 2px;
+            display: inline-block;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔧 QR Kod Yönetimi</h1>
+            <p style="color: #666;">Yeni QR kodlar oluşturun, listeleyin ve yönetin</p>
+            
+            <!-- İstatistikler -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="label">Toplam QR</div>
+                    <div class="number" id="stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Kullanılan</div>
+                    <div class="number" id="stat-used">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Bekleyen</div>
+                    <div class="number" id="stat-unused">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Kullanım %</div>
+                    <div class="number" id="stat-percentage">0%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- İçerik -->
+        <div class="content">
+            <!-- Yeni QR Oluştur -->
+            <div class="card">
+                <h2>➕ Yeni QR Kod Oluştur</h2>
+                <div id="gen-message" class="message"></div>
+                
+                <form id="genForm">
+                    <div class="form-group">
+                        <label for="partCode">Parça Kodu *</label>
+                        <input type="text" id="partCode" name="part_code" placeholder="Örn: 17013-11030" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="partName">Parça İsmi *</label>
+                        <input type="text" id="partName" name="part_name" placeholder="Örn: Motor Başlığı" required>
+                    </div>
+                    
+                    <button type="submit">✨ QR Oluştur</button>
+                </form>
+                
+                <div id="qr-preview" class="qr-preview">
+                    <img id="qr-image" src="" alt="QR Code">
+                    <p id="qr-details"></p>
+                </div>
+            </div>
+            
+            <!-- CSV Import -->
+            <div class="card">
+                <h2>📥 CSV Import</h2>
+                <div id="import-message" class="message"></div>
+                
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">
+                    ⚠️ Mevcut QR kodlar silinmez, sadece yeni parçalar eklenir
+                </p>
+                
+                <form id="importForm">
+                    <div class="form-group">
+                        <label for="csvFile" class="file-input-label">
+                            📎 CSV Dosyası Seçin
+                        </label>
+                        <input type="file" id="csvFile" name="file" accept=".csv" required>
+                        <p style="color: #999; margin-top: 10px; font-size: 12px;">
+                            Format: part_code, part_name
+                        </p>
+                    </div>
+                    
+                    <button type="submit">🚀 İmport Et</button>
+                </form>
+            </div>
+            
+            <!-- PDF Export -->
+            <div class="card">
+                <h2>📄 PDF İndir</h2>
+                <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                    Tüm QR kodlarını PDF olarak indir
+                </p>
+                <button onclick="exportPDF()">📥 PDF İndir</button>
+            </div>
+        </div>
+        
+        <!-- QR Kodları Listele -->
+        <div class="card" style="margin-top: 30px;">
+            <h2>📋 QR Kodları Listesi</h2>
+            <div id="list-message" class="message"></div>
+            
+            <div id="qr-list" class="qr-list"></div>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/admin/qr';
+        let currentPage = 1;
+        
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadQRList();
+            setupEventListeners();
+        });
+        
+        // Event Listeners
+        function setupEventListeners() {
+            document.getElementById('genForm').addEventListener('submit', generateQR);
+            document.getElementById('importForm').addEventListener('submit', importCSV);
+            document.getElementById('csvFile').addEventListener('change', updateFileLabel);
+        }
+        
+        // İstatistikleri yükle
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/stats`);
+                const data = await res.json();
+                
+                document.getElementById('stat-total').textContent = data.total_qr;
+                document.getElementById('stat-used').textContent = data.used_qr;
+                document.getElementById('stat-unused').textContent = data.unused_qr;
+                document.getElementById('stat-percentage').textContent = data.usage_percentage + '%';
+            } catch (e) {
+                console.error('Stats hatası:', e);
+            }
+        }
+        
+        // Yeni QR oluştur
+        async function generateQR(e) {
+            e.preventDefault();
+            
+            const partCode = document.getElementById('partCode').value;
+            const partName = document.getElementById('partName').value;
+            const msgEl = document.getElementById('gen-message');
+            const btn = e.target.querySelector('button');
+            
+            try {
+                btn.innerHTML = '<span class="loading"></span> Oluşturuluyor...';
+                btn.disabled = true;
+                
+                const res = await fetch(`${API_BASE}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ part_code: partCode, part_name: partName })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage(msgEl, 'success', '✅ ' + data.message);
+                    document.getElementById('genForm').reset();
+                    loadStats();
+                    loadQRList();
+                    
+                    // QR göster
+                    setTimeout(() => {
+                        document.getElementById('qr-preview').style.display = 'block';
+                        document.getElementById('qr-details').textContent = `${data.qr_id}`;
+                    }, 500);
+                } else {
+                    showMessage(msgEl, 'error', '❌ ' + data.message);
+                }
+            } catch (e) {
+                showMessage(msgEl, 'error', '❌ Hata: ' + e.message);
+            } finally {
+                btn.innerHTML = '✨ QR Oluştur';
+                btn.disabled = false;
+            }
+        }
+        
+        // CSV Import
+        async function importCSV(e) {
+            e.preventDefault();
+            
+            const file = document.getElementById('csvFile').files[0];
+            const msgEl = document.getElementById('import-message');
+            const btn = e.target.querySelector('button');
+            
+            if (!file) {
+                showMessage(msgEl, 'error', '❌ Dosya seçiniz');
+                return;
+            }
+            
+            try {
+                btn.innerHTML = '<span class="loading"></span> İmport ediliyor...';
+                btn.disabled = true;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const res = await fetch(`${API_BASE}/import-csv`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage(msgEl, 'success', '✅ ' + data.message);
+                    document.getElementById('importForm').reset();
+                    loadStats();
+                    loadQRList();
+                } else {
+                    showMessage(msgEl, 'error', '❌ ' + data.message);
+                }
+            } catch (e) {
+                showMessage(msgEl, 'error', '❌ Hata: ' + e.message);
+            } finally {
+                btn.innerHTML = '🚀 İmport Et';
+                btn.disabled = false;
+            }
+        }
+        
+        // QR Kodları Listele
+        async function loadQRList(page = 1) {
+            try {
+                const res = await fetch(`${API_BASE}/list?page=${page}&per_page=10`);
+                const data = await res.json();
+                
+                const listEl = document.getElementById('qr-list');
+                listEl.innerHTML = '';
+                
+                data.items.forEach(qr => {
+                    const status = qr.is_used ? 'Kullanıldı' : 'Beklemede';
+                    const statusClass = qr.is_used ? 'used' : 'unused';
+                    
+                    listEl.innerHTML += `
+                        <div class="qr-item">
+                            <div class="qr-id">${qr.qr_id}</div>
+                            <div>${qr.part_code}</div>
+                            <div class="status ${statusClass}">${status}</div>
+                        </div>
+                    `;
+                });
+                
+                // Pagination
+                const pagEl = document.getElementById('pagination');
+                pagEl.innerHTML = '';
+                
+                for (let i = 1; i <= data.pages; i++) {
+                    pagEl.innerHTML += `
+                        <button onclick="loadQRList(${i})" ${i === page ? 'style="opacity: 0.5;"' : ''}>
+                            ${i}
+                        </button>
+                    `;
+                }
+            } catch (e) {
+                console.error('List hatası:', e);
+            }
+        }
+        
+        // PDF Export
+        async function exportPDF() {
+            window.location.href = `${API_BASE}/export-pdf`;
+        }
+        
+        // Mesaj göster
+        function showMessage(el, type, msg) {
+            el.className = `message ${type}`;
+            el.textContent = msg;
+        }
+        
+        // Dosya label güncelle
+        function updateFileLabel() {
+            const file = document.getElementById('csvFile').files[0];
+            if (file) {
+                document.querySelector('.file-input-label').textContent = '✅ ' + file.name;
+            }
+        }
+    </script>
+</body>
+</html>

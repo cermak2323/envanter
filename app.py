@@ -2485,6 +2485,17 @@ def admin_start_count():
         
         print(f"✅ Sayım oturumu başlatıldı: {session_id}")
         
+        # 🔥 SOCKET.IO BİLDİRİMİ: Tüm clientlara yeni sayım başladığını söyle
+        try:
+            socketio.emit('session_reset', {
+                'session_id': session_id,
+                'total_expected': total_expected,
+                'message': '🔄 Yeni sayım başlatıldı - sayfa sıfırlanıyor...'
+            }, broadcast=True)
+            print(f"📡 Socket bildirimi gönderildi: session_reset")
+        except Exception as socket_err:
+            print(f"⚠️ Socket bildirimi gönderilemedi: {socket_err}")
+        
         return jsonify({
             'success': True,
             'message': 'Sayım oturumu başlatıldı',

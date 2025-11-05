@@ -2126,6 +2126,39 @@
             }, 2000);
         });
 
+        // 🔥 YENİ: Sayım sıfırlandığında Set'i temizle ve stats yükle
+        socket.on('session_reset', function(data) {
+            console.log('🔄 Yeni sayım başlatıldı, sayfa sıfırlanıyor...', data);
+            
+            // Set'i tamamen temizle
+            scannedQRsInSession.clear();
+            console.log('🗑️ scannedQRsInSession.clear() - Set sıfırlandı');
+            
+            // Ultra Scanner'da da reset yap
+            if (window.ultraScanner && typeof window.ultraScanner.resetSession === 'function') {
+                window.ultraScanner.resetSession(data.session_id);
+            }
+            
+            // Session ID'yi güncelle
+            if (data.session_id) {
+                window.currentSessionId = data.session_id;
+                sessionStorage.setItem('currentSessionId', data.session_id);
+                document.body.dataset.sessionId = data.session_id;
+                console.log('✅ Yeni Session ID set edildi:', data.session_id);
+            }
+            
+            // Stats'ı yeniden yükle (sunucudan fresh data)
+            loadSessionStats();
+            
+            // Aktiviteleri de yenile
+            loadRecentActivities();
+            
+            // Kullanıcıya bilgi göster
+            if (data.message) {
+                showAlert(data.message, 'info');
+            }
+        });
+
         async function checkAuth() {
             const response = await fetch('/check_auth');
             const data = await response.json();

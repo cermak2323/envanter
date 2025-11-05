@@ -941,6 +941,32 @@ class UltraQRScanner {
                document.body.dataset.sessionId ||
                '1';
     }
+
+    // 🔥 YENİ: Sayım sıfırlandığında Set'i temizle
+    resetSession(newSessionId) {
+        console.log('🔄 Ultra Scanner - Session reset:', newSessionId);
+        
+        // Global Set'i temizle
+        if (window.scannedQRsInSession) {
+            window.scannedQRsInSession.clear();
+            console.log('🗑️ scannedQRsInSession.clear() - Ultra Scanner');
+        }
+        
+        // Session ID'yi güncelle
+        if (newSessionId) {
+            this.currentSessionId = newSessionId;
+            window.currentSessionId = newSessionId;
+            sessionStorage.setItem('currentSessionId', newSessionId);
+            console.log('✅ Yeni Session ID: ', newSessionId);
+        }
+        
+        // Scanner state'i sıfırla
+        this.lastScan = '';
+        this.lastScanTime = 0;
+        this.scanCount = 0;
+        
+        console.log('✅ Ultra Scanner reset tamamlandı');
+    }
 }
 
 // 🚀 AUTO-INITIALIZE

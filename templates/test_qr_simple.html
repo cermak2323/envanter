@@ -249,6 +249,27 @@
                 console.log('📨 Scan result alındı:', data);
                 handleScanResult(data);
             });
+
+            // 🔥 YENİ: Sayım sıfırlandığında Set'i temizle
+            socket.on('session_reset', (data) => {
+                console.log('🔄 TEST - Yeni sayım başlatıldı, sayfa sıfırlanıyor...', data);
+                
+                // Set'i tamamen temizle
+                scannedQRs.clear();
+                console.log('🗑️ scannedQRs.clear() - Test sayfa Set sıfırlandı');
+                
+                // Session ID'yi güncelle
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                    console.log('✅ TEST - Yeni Session ID:', sessionId);
+                }
+                
+                // Stats'ı yeniden yükle
+                loadStats();
+                
+                // Kullanıcıya bilgi göster
+                alert(data.message || '🔄 Yeni sayım başlatıldı!');
+            });
         });
         
         function generateSessionId() {

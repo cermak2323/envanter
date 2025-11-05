@@ -2665,12 +2665,13 @@ def get_session_stats():
         count_row = cursor.fetchone()
         scanned_count = count_row[0] if count_row else 0
         
-        # Scanned QR listesi
+        # Scanned QR listesi (en son taranan en üstte)
         execute_query(cursor, '''
-            SELECT DISTINCT qr_id
+            SELECT qr_id, MAX(scanned_at) as last_scan
             FROM scanned_qr
             WHERE session_id = %s
-            ORDER BY scanned_at DESC
+            GROUP BY qr_id
+            ORDER BY last_scan DESC
             LIMIT 500
         ''', (session_id,))
         

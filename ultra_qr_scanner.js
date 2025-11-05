@@ -603,10 +603,10 @@ class UltraQRScanner {
         // Sunucuya gönder
         this.sendQRToServer(qrData);
         
-        // 2 saniye sonra işlemi bitir (yeni QR okumaya hazır ol)
+        // 500ms sonra işlemi bitir (yeni QR okumaya hazır ol)
         setTimeout(() => {
             this.isProcessing = false;
-        }, 2000);
+        }, 500);
     }
     
     showSimpleGreenFeedback(qrData) {

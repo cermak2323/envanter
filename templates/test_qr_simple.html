@@ -370,11 +370,11 @@
                 console.error('❌ QR gönderme hatası:', error);
             }
             
-            // 2 saniye sonra işlemi bitir
+            // 500ms sonra işlemi bitir
             setTimeout(() => {
                 isProcessing = false;
                 console.log('✅ Yeni QR okumaya hazır');
-            }, 2000);
+            }, 500);
         }
         
         function showSimpleGreenFeedback(qrCode) {

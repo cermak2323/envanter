@@ -1821,24 +1821,21 @@ def process_qr_scan_ultra(qr_id, session_id):
 
         qr_id_db, part_code, part_name, is_used, created_at = qr_data
 
-        # Ultra duplicate checking with time cooldown
+        # 🔒 KALICI DUPLICATE KONTROLÜ - Bir session'da bir QR sadece 1 kez okunabilir
         execute_query(cursor, """
-            SELECT scanned_at FROM scanned_qr 
+            SELECT COUNT(*) FROM scanned_qr 
             WHERE qr_id = %s AND session_id = %s
-            ORDER BY scanned_at DESC LIMIT 1
         """, (qr_id, str(session_id)))
 
-        existing_scan = cursor.fetchone()
-        if existing_scan:
-            time_diff = datetime.now() - existing_scan[0]
-            if time_diff.total_seconds() < 5:  # 5 seconds ultra cooldown
-                return {
-                    'success': False,
-                    'message': f'⚠️ {part_name} zaten tarandı! (5 saniye bekleyin)',
-                    'item_name': part_name,
-                    'cooldown_remaining': int(5 - time_diff.total_seconds()),
-                    'duplicate': True
-                }
+        existing_count = cursor.fetchone()[0]
+        if existing_count > 0:
+            # Bu QR zaten bu session'da taranmış - asla tekrar taranmamalı
+            return {
+                'success': False,
+                'message': f'⚠️ {part_name} zaten tarandı!',
+                'item_name': part_name,
+                'duplicate': True
+            }
 
         # Insert ultra scan record with enhanced data
         try:

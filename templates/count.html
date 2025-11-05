@@ -2076,6 +2076,15 @@
                 console.log('🔓 UNLOCK: Backend yanıt verdi, yeni QR kabul edilebilir');
             }
 
+            // ✅ BAŞARILI SCAN - SET'E EKLE (kalıcı duplicate önleme için)
+            if (data.success && !data.duplicate) {
+                const qrId = data.qr_code || data.qr_id || data.part_code;
+                if (qrId) {
+                    scannedQRsInSession.add(String(qrId));
+                    console.log('📝 QR Sete eklendi:', qrId, 'Toplam:', scannedQRsInSession.size);
+                }
+            }
+
             // MESAJ ZORUNLU GÖSTERİM - HER DURUMDA
             if (data.duplicate || !data.success) {
                 // DUPLICATE veya HATA - KIRMIZI MESAJ + SES
